@@ -1,0 +1,33 @@
+
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+packages/foundry/lib
+
+# packages/nextjs/wallet-playground specific ignores
+packages/nextjs/wallet-playground/node_modules
+packages/nextjs/wallet-playground/.pnp
+packages/nextjs/wallet-playground/.pnp.*
+packages/nextjs/wallet-playground/.yarn/*
+!packages/nextjs/wallet-playground/.yarn/patches
+!packages/nextjs/wallet-playground/.yarn/plugins
+!packages/nextjs/wallet-playground/.yarn/releases
+!packages/nextjs/wallet-playground/.yarn/versions
+packages/nextjs/wallet-playground/coverage
+packages/nextjs/wallet-playground/.next/
+packages/nextjs/wallet-playground/out/
+packages/nextjs/wallet-playground/build
+packages/nextjs/wallet-playground/.DS_Store
+packages/nextjs/wallet-playground/*.pem
+packages/nextjs/wallet-playground/npm-debug.log*
+packages/nextjs/wallet-playground/yarn-debug.log*
+packages/nextjs/wallet-playground/yarn-error.log*
+packages/nextjs/wallet-playground/.pnpm-debug.log*
+packages/nextjs/wallet-playground/.env*
+packages/nextjs/wallet-playground/.vercel
+packages/nextjs/wallet-playground/*.tsbuildinfo
+packages/nextjs/wallet-playground/next-env.d.ts
+
+
+# env files (can opt-in for committing if needed)
+.env*
+.DS_Store

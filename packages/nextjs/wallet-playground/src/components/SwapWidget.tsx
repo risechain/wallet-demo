@@ -1,0 +1,608 @@
+'use client'
+
+import { useAccount, useBalance, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { useEffect, useState } from 'react'
+import { TOKENS, UNISWAP_CONTRACTS, MintableERC20ABI, UniswapV2RouterABI } from '@/config/tokens'
+import { formatUnits, parseUnits, encodeFunctionData } from 'viem'
+import { useSessionKeys, useSessionKeyManager } from '@/hooks/useSessionKeys'
+import {
+  executeWithSessionKey,
+  canExecuteCalls,
+  isSessionKeyUsable,
+  RISE_CONTRACTS
+} from '@/utils/sessionKeyTransactions'
+
+type TokenSymbol = keyof typeof TOKENS
+
+export function SwapWidget() {
+  const { address, isConnected, connector } = useAccount()
+  const [mounted, setMounted] = useState(false)
+  const [fromToken, setFromToken] = useState<TokenSymbol>('MockUSD')
+  const [toToken, setToToken] = useState<TokenSymbol>('MockToken')
+  const [fromAmount, setFromAmount] = useState('')
+  const [toAmount, setToAmount] = useState('')
+  const [error, setError] = useState('')
+  const [isUsingSessionKey, setIsUsingSessionKey] = useState(false)
+  const [sessionKeyTxHash, setSessionKeyTxHash] = useState('')
+
+  // Session key hooks
+  const { sessionKeys } = useSessionKeys()
+  const { getSessionKeyPrivateKey } = useSessionKeyManager()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const fromTokenConfig = TOKENS[fromToken]
+  const toTokenConfig = TOKENS[toToken]
+
+  // Get balances
+  const { data: fromBalance, refetch: refetchFromBalance } = useBalance({
+    address,
+    token: fromTokenConfig.address,
+    query: {
+      refetchInterval: 10000,
+    }
+  })
+
+  const { data: toBalance, refetch: refetchToBalance } = useBalance({
+    address,
+    token: toTokenConfig.address,
+    query: {
+      refetchInterval: 10000,
+    }
+  })
+
+  // Check for usable session key
+  const getUsableSessionKey = () => {
+    for (const key of sessionKeys) {
+      if (!isSessionKeyUsable(key, getSessionKeyPrivateKey)) continue
+
+      // Check if this key can execute our required contracts
+      const requiredContracts = [
+        fromTokenConfig.address,
+        UNISWAP_CONTRACTS.router
+      ]
+
+      const { canExecute } = canExecuteCalls(key,
+        requiredContracts.map(to => ({ to }))
+      )
+
+      if (canExecute) {
+        return key
+      }
+    }
+    return null
+  }
+
+  const usableSessionKey = getUsableSessionKey()
+
+  // Check allowance
+  const {
+    data: allowance,
+    refetch: refetchAllowance,
+    isLoading: allowanceLoading,
+    error: allowanceError
+  } = useReadContract({
+    address: fromTokenConfig.address,
+    abi: MintableERC20ABI,
+    functionName: 'allowance',
+    args: address ? [address, UNISWAP_CONTRACTS.router] : undefined,
+    query: {
+      enabled: !!address,
+    }
+  })
+
+  // Parse amount for quote
+  const amountInBigInt = (() => {
+    try {
+      if (!fromAmount || fromAmount.trim() === '') return undefined
+      const numAmount = parseFloat(fromAmount)
+      if (isNaN(numAmount) || numAmount <= 0) return undefined
+      return parseUnits(fromAmount, fromTokenConfig.decimals)
+    } catch (error) {
+      console.log('❌ Amount parsing error:', error)
+      return undefined
+    }
+  })()
+
+  const contractArgs = amountInBigInt && fromToken !== toToken ? [
+    amountInBigInt,
+    [fromTokenConfig.address, toTokenConfig.address]
+  ] : undefined
+
+  // Get quote
+  const {
+    data: quoteData,
+    isLoading: quoteLoading,
+    error: quoteError,
+    isError: quoteIsError,
+    refetch: refetchQuote
+  } = useReadContract({
+    address: UNISWAP_CONTRACTS.router,
+    abi: UniswapV2RouterABI,
+    functionName: 'getAmountsOut',
+    args: contractArgs,
+    query: {
+      enabled: !!contractArgs && !!amountInBigInt && fromToken !== toToken && !!address,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30000,
+    }
+  })
+
+  // Update quote amount
+  useEffect(() => {
+    if (quoteData && Array.isArray(quoteData) && quoteData.length >= 2) {
+      try {
+        const outputAmount = formatUnits(quoteData[1], toTokenConfig.decimals)
+        const formattedAmount = parseFloat(outputAmount).toFixed(6)
+        setToAmount(formattedAmount)
+        setError('')
+      } catch (formatError) {
+        console.log('❌ Quote Format Error:', formatError)
+        setToAmount('')
+        setError('Error formatting quote')
+      }
+    } else if (quoteIsError || quoteError) {
+      setToAmount('')
+      setError(quoteError?.message?.includes('INSUFFICIENT_OUTPUT_AMOUNT') ?
+        'Insufficient liquidity' :
+        'Quote failed - check liquidity')
+    } else if (!fromAmount || fromAmount.trim() === '') {
+      setToAmount('')
+      setError('')
+    }
+  }, [quoteData, quoteLoading, quoteIsError, quoteError, fromAmount, toTokenConfig.decimals])
+
+  // Check if approval needed
+  const needsApproval = (() => {
+    if (!fromAmount || parseFloat(fromAmount) <= 0) return false
+    if (allowance === undefined || allowance === null) return true
+
+    try {
+      const requiredAmount = parseUnits(fromAmount, fromTokenConfig.decimals)
+      return allowance < requiredAmount
+    } catch (error) {
+      return true
+    }
+  })()
+
+  // Traditional wagmi transactions (fallback)
+  const {
+    writeContract: approve,
+    data: approveHash,
+    isPending: isApproving,
+    error: approveError
+  } = useWriteContract()
+
+  const { isSuccess: approveSuccess } = useWaitForTransactionReceipt({
+    hash: approveHash,
+    onSuccess: () => {
+      refetchAllowance()
+      refetchFromBalance()
+      setTimeout(() => {
+        if (contractArgs) refetchQuote()
+      }, 1000)
+    }
+  })
+
+  const {
+    writeContract: swap,
+    data: swapHash,
+    isPending: isSwapping,
+    error: swapError
+  } = useWriteContract()
+
+  const { isSuccess: swapSuccess } = useWaitForTransactionReceipt({
+    hash: swapHash,
+    onSuccess: () => {
+      setFromAmount('')
+      setToAmount('')
+      setError('')
+      setTimeout(() => {
+        refetchFromBalance()
+        refetchToBalance()
+      }, 2000)
+    }
+  })
+
+  // Session key transaction functions
+  const handleSessionKeyApprove = async () => {
+    if (!usableSessionKey || !fromAmount || parseFloat(fromAmount) <= 0) return
+
+    const privateKey = getSessionKeyPrivateKey(usableSessionKey.publicKey)
+    if (!privateKey) {
+      setError('Session key private key not found')
+      return
+    }
+
+    try {
+      const maxAmount = parseUnits('1000000000', fromTokenConfig.decimals)
+
+      const approveCallData = encodeFunctionData({
+        abi: MintableERC20ABI,
+        functionName: 'approve',
+        args: [UNISWAP_CONTRACTS.router, maxAmount],
+      })
+
+      const calls = [{
+        to: fromTokenConfig.address,
+        data: approveCallData
+      }]
+
+      console.log('🔑 Executing approve with session key')
+      const result = await executeWithSessionKey(usableSessionKey, privateKey, calls, connector)
+
+      if (result.success) {
+        setSessionKeyTxHash(result.hash)
+        // Refetch allowance after a delay
+        setTimeout(() => {
+          refetchAllowance()
+          refetchFromBalance()
+        }, 2000)
+      } else {
+        setError(`Approval failed: ${result.error}`)
+      }
+    } catch (err: any) {
+      console.error('❌ Session key approval error:', err)
+      setError(`Approval failed: ${err.message}`)
+    }
+  }
+
+  const handleSessionKeySwap = async () => {
+    if (!usableSessionKey || !fromAmount || !toAmount) return
+
+    const privateKey = getSessionKeyPrivateKey(usableSessionKey.publicKey)
+    if (!privateKey) {
+      setError('Session key private key not found')
+      return
+    }
+
+    try {
+      const amountIn = parseUnits(fromAmount, fromTokenConfig.decimals)
+      const estimatedAmountOut = parseFloat(toAmount)
+      const minAmountOut = estimatedAmountOut * 0.8 // 20% slippage
+      const amountOutMin = parseUnits(minAmountOut.toString(), toTokenConfig.decimals)
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 20) // 20 minutes
+
+      const swapCallData = encodeFunctionData({
+        abi: UniswapV2RouterABI,
+        functionName: 'swapExactTokensForTokens',
+        args: [
+          amountIn,
+          amountOutMin,
+          [fromTokenConfig.address, toTokenConfig.address],
+          address,
+          deadline,
+        ],
+      })
+
+      const calls = [{
+        to: UNISWAP_CONTRACTS.router,
+        data: swapCallData
+      }]
+
+      console.log('🔑 Executing swap with session key')
+      const result = await executeWithSessionKey(usableSessionKey, privateKey, calls, connector)
+
+      if (result.success) {
+        setSessionKeyTxHash(result.hash)
+        setFromAmount('')
+        setToAmount('')
+        setError('')
+        // Refetch balances after a delay
+        setTimeout(() => {
+          refetchFromBalance()
+          refetchToBalance()
+        }, 2000)
+      } else {
+        setError(`Swap failed: ${result.error}`)
+      }
+    } catch (err: any) {
+      console.error('❌ Session key swap error:', err)
+      setError(`Swap failed: ${err.message}`)
+    }
+  }
+
+  // Traditional handlers (fallback)
+  const handleApprove = async () => {
+    if (!fromAmount || parseFloat(fromAmount) <= 0) return
+    try {
+      const maxAmount = parseUnits('1000000000', fromTokenConfig.decimals)
+      await approve({
+        address: fromTokenConfig.address,
+        abi: MintableERC20ABI,
+        functionName: 'approve',
+        args: [UNISWAP_CONTRACTS.router, maxAmount],
+      })
+    } catch (err: any) {
+      setError(`Approval failed: ${err.shortMessage || err.message}`)
+    }
+  }
+
+  const handleSwap = async () => {
+    setError('')
+
+    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+      setError('Enter an amount')
+      return
+    }
+
+    if (!toAmount || parseFloat(toAmount) <= 0) {
+      setError('No quote available')
+      return
+    }
+
+    try {
+      const amountIn = parseUnits(fromAmount, fromTokenConfig.decimals)
+      if (fromBalance && amountIn > fromBalance.value) {
+        setError('Insufficient balance')
+        return
+      }
+
+      const estimatedAmountOut = parseFloat(toAmount)
+      const minAmountOut = estimatedAmountOut * 0.8
+      const amountOutMin = parseUnits(minAmountOut.toString(), toTokenConfig.decimals)
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 20)
+
+      await swap({
+        address: UNISWAP_CONTRACTS.router,
+        abi: UniswapV2RouterABI,
+        functionName: 'swapExactTokensForTokens',
+        args: [amountIn, amountOutMin, [fromTokenConfig.address, toTokenConfig.address], address, deadline],
+      })
+    } catch (err: any) {
+      setError(`Swap failed: ${err.shortMessage || err.message || 'Unknown error'}`)
+    }
+  }
+
+  const handleTokenSwitch = () => {
+    setFromToken(toToken)
+    setToToken(fromToken)
+    setFromAmount('')
+    setToAmount('')
+    setError('')
+    setSessionKeyTxHash('')
+  }
+
+  const handleMaxClick = () => {
+    if (fromBalance) {
+      const maxAmount = formatUnits(fromBalance.value, fromBalance.decimals)
+      setFromAmount(maxAmount)
+    }
+  }
+
+  if (!mounted) {
+    return (
+      <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-700 rounded w-1/4"></div>
+          <div className="h-20 bg-gray-700 rounded"></div>
+          <div className="h-8 bg-gray-700 rounded w-1/3 mx-auto"></div>
+          <div className="h-20 bg-gray-700 rounded"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="p-8 bg-gray-800 border border-gray-700 rounded-xl text-center">
+        <div className="text-gray-400 mb-4">
+          <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <p className="text-gray-300 font-medium">Connect your wallet to swap</p>
+      </div>
+    )
+  }
+
+  const isTransacting = isApproving || isSwapping
+  const canSwap = Boolean(
+    fromAmount &&
+    toAmount &&
+    !needsApproval &&
+    !isTransacting &&
+    !quoteLoading &&
+    !allowanceLoading &&
+    parseFloat(fromAmount) > 0 &&
+    parseFloat(toAmount) > 0 &&
+    !error &&
+    address &&
+    allowance !== undefined
+  )
+
+  return (
+    <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-white">Swap</h3>
+        {/* Session Key Status */}
+        {usableSessionKey ? (
+          <div className="flex items-center space-x-2 text-xs">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-green-400">🔑 Session Key Active</span>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-2 text-xs">
+            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+            <span className="text-yellow-400">👆 Using Passkey</span>
+          </div>
+        )}
+      </div>
+
+      {/* From Section */}
+      <div className="mb-1">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-300">From</span>
+          <span className="text-sm text-gray-400">
+            Balance: {fromBalance ? parseFloat(formatUnits(fromBalance.value, fromBalance.decimals)).toFixed(4) : '0'}
+          </span>
+        </div>
+
+        <div className="relative bg-gray-700 border border-gray-600 rounded-xl p-4 hover:border-gray-500 transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 mr-3">
+              <input
+                type="text"
+                placeholder="0"
+                value={fromAmount}
+                onChange={(e) => {
+                  setFromAmount(e.target.value)
+                  setError('')
+                  setSessionKeyTxHash('')
+                }}
+                className="w-full text-2xl font-semibold bg-transparent text-white placeholder-gray-400 border-none outline-none"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleMaxClick}
+                className="px-2 py-1 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                MAX
+              </button>
+
+              <div className="bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-sm font-medium text-white">
+                {fromTokenConfig.symbol}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Switch Button */}
+      <div className="flex justify-center my-4">
+        <button
+          onClick={handleTokenSwitch}
+          className="p-2 bg-gray-700 hover:bg-gray-600 rounded-full border border-gray-600 transition-colors"
+        >
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+        </button>
+      </div>
+
+      {/* To Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-300">To</span>
+          <span className="text-sm text-gray-400">
+            Balance: {toBalance ? parseFloat(formatUnits(toBalance.value, toBalance.decimals)).toFixed(4) : '0'}
+          </span>
+        </div>
+
+        <div className="relative bg-gray-700 border border-gray-600 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 mr-3">
+              <div className="text-2xl font-semibold text-white">
+                {quoteLoading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full mr-2"></div>
+                    <span className="text-gray-400">Loading...</span>
+                  </div>
+                ) : (
+                  <span>{toAmount || <span className="text-gray-400">0</span>}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-sm font-medium text-white">
+              {toTokenConfig.symbol}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-900/30 border border-red-600 rounded-lg">
+          <p className="text-sm text-red-300">{error}</p>
+        </div>
+      )}
+
+      {/* Transaction Error */}
+      {(approveError || swapError) && (
+        <div className="mb-4 p-3 bg-red-900/30 border border-red-600 rounded-lg">
+          <p className="text-sm text-red-300">
+            {approveError?.message || swapError?.message}
+          </p>
+        </div>
+      )}
+
+      {/* Action Button */}
+      <div className="space-y-3">
+        {needsApproval && !approveSuccess ? (
+          <div className="space-y-3">
+            <div className="p-3 bg-yellow-900/30 border border-yellow-600 rounded-lg">
+              <p className="text-sm text-yellow-300">
+                You need to approve {fromTokenConfig.symbol} spending first
+              </p>
+            </div>
+            <button
+              onClick={usableSessionKey ? handleSessionKeyApprove : handleApprove}
+              disabled={isApproving || !fromAmount || parseFloat(fromAmount) <= 0}
+              className="w-full py-4 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
+            >
+              {isApproving ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                  Approving...
+                </div>
+              ) : (
+                `${usableSessionKey ? '🔑' : '👆'} Approve ${fromTokenConfig.symbol}`
+              )}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={usableSessionKey ? handleSessionKeySwap : handleSwap}
+            disabled={!canSwap}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
+          >
+            {isSwapping ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                Swapping...
+              </div>
+            ) : (
+              `${usableSessionKey ? '🔑' : '👆'} Swap`
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Transaction Status */}
+      {(approveHash || swapHash || sessionKeyTxHash) && (
+        <div className="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-blue-300">
+              {sessionKeyTxHash ? 'Session Key Transaction' :
+               approveHash && !swapHash ? 'Approval' : 'Swap'} transaction
+            </span>
+            <a
+              href={`https://explorer.testnet.riselabs.xyz/tx/${sessionKeyTxHash || approveHash || swapHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-400 hover:text-blue-300 font-mono"
+            >
+              {(sessionKeyTxHash || approveHash || swapHash)?.slice(0, 10)}...{(sessionKeyTxHash || approveHash || swapHash)?.slice(-6)} ↗
+            </a>
+          </div>
+          {(approveSuccess || swapSuccess || sessionKeyTxHash) && (
+            <div className="flex items-center mt-1">
+              <svg className="w-4 h-4 text-green-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-sm text-green-400">
+                {sessionKeyTxHash ? 'Sent with Session Key' : 'Confirmed'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
