@@ -18,6 +18,9 @@
     "viem": "^2.21.0",
     "wagmi": "^2.15.0"
   },
+  "overrides": {
+    "porto": "$porto"
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
