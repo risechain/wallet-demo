@@ -3,17 +3,21 @@
 import { useState, useEffect } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { TOKENS, MintableERC20ABI } from '@/config/tokens'
-import { useSessionKeys, useSessionKeyManager } from '@/hooks/useSessionKeys'
+import { useSessionKeys } from '@/hooks/useSessionKeys'
 import { useSessionKeyPreference } from '@/context/SessionKeyContext'
 import { executeTransaction, TransactionCall } from '@/utils/sessionKeyTransactions'
 import { encodeFunctionData } from 'viem'
+import { CopyableAddress } from './CopyableAddress'
 
 export function MintButtonSimple() {
   const { address, isConnected, connector } = useAccount()
 
-  const { sessionKeys } = useSessionKeys()
-  const sessionKeyManager = useSessionKeyManager()
+  const { hasSessionKey, executeWithSessionKey, getUsableSessionKey } = useSessionKeys()
   const { preferSessionKey } = useSessionKeyPreference()
+
+  // Get current key state - this will update when hasSessionKey changes
+  const keyExists = hasSessionKey()
+  const usableSessionKey = getUsableSessionKey()
 
   const [mounted, setMounted] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
@@ -105,8 +109,9 @@ export function MintButtonSimple() {
           }
         },
         connector,
-        sessionKeyManager,
-        sessionKeys
+        executeWithSessionKey,
+        keyExists,
+        usableSessionKey
       )
 
       if (result.success) {
@@ -201,21 +206,34 @@ export function MintButtonSimple() {
           {/* Transaction Status */}
           {(mintHash || smartMintResult?.hash) && (
             <div className="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg text-sm">
-              <div className="text-blue-300">
-                {smartMintResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} {currentToken} mint tx:{' '}
+              <div className="text-blue-300 flex items-center flex-wrap gap-1">
+                <span>{smartMintResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} {currentToken} mint tx:</span>
+                <CopyableAddress
+                  address={mintHash || smartMintResult?.hash || ''}
+                  prefix={8}
+                  suffix={6}
+                  className="text-blue-400"
+                />
                 <a
                   href={`https://explorer.testnet.riselabs.xyz/tx/${mintHash || smartMintResult?.hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300 underline"
+                  className="text-blue-400 hover:text-blue-300"
+                  title="View on explorer"
                 >
-                  {(mintHash || smartMintResult?.hash)?.slice(0, 10)}...{(mintHash || smartMintResult?.hash)?.slice(-6)} ↗
+                  ↗
                 </a>
-                {(mintSuccess || smartMintResult?.success) && ' ✅'}
+                {(mintSuccess || smartMintResult?.success) && <span className="text-green-400">✅</span>}
               </div>
               {smartMintResult?.usedSessionKey && smartMintResult?.keyId && (
-                <div className="text-blue-400 text-xs mt-1">
-                  Used key: {smartMintResult.keyId}
+                <div className="text-blue-400 text-xs mt-1 flex items-center">
+                  Used key:
+                  <CopyableAddress
+                    address={smartMintResult.keyId}
+                    prefix={6}
+                    suffix={6}
+                    className="text-blue-400 ml-1"
+                  />
                 </div>
               )}
             </div>

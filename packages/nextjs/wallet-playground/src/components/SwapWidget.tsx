@@ -4,7 +4,7 @@ import { useAccount, useBalance, useWriteContract, useWaitForTransactionReceipt,
 import { useEffect, useState } from 'react'
 import { TOKENS, UNISWAP_CONTRACTS, MintableERC20ABI, UniswapV2RouterABI } from '@/config/tokens'
 import { formatUnits, parseUnits, encodeFunctionData } from 'viem'
-import { useSessionKeys, useSessionKeyManager } from '@/hooks/useSessionKeys'
+import { useSessionKeys } from '@/hooks/useSessionKeys'
 import { useSessionKeyPreference } from '@/context/SessionKeyContext'
 import {
   executeTransaction,
@@ -12,6 +12,7 @@ import {
   TransactionCall,
   RISE_CONTRACTS
 } from '@/utils/sessionKeyTransactions'
+import { CopyableAddress } from './CopyableAddress'
 
 type TokenSymbol = keyof typeof TOKENS
 
@@ -32,9 +33,12 @@ export function SwapWidget() {
   } | null>(null)
 
   // Session key hooks
-  const { sessionKeys } = useSessionKeys()
-  const sessionKeyManager = useSessionKeyManager()
+  const { hasSessionKey, executeWithSessionKey, getUsableSessionKey } = useSessionKeys()
   const { preferSessionKey } = useSessionKeyPreference()
+
+  // Get current key state - this will update when hasSessionKey changes
+  const keyExists = hasSessionKey()
+  const usableSessionKey = getUsableSessionKey()
 
   useEffect(() => {
     setMounted(true)
@@ -65,10 +69,6 @@ export function SwapWidget() {
     fromTokenConfig.address.toLowerCase(),
     UNISWAP_CONTRACTS.router.toLowerCase()
   ]
-
-  const usableSessionKey = sessionKeyManager.hasValidSessionKey(sessionKeys, {
-    calls: requiredContracts
-  })
 
   // Check allowance
   const {
@@ -237,8 +237,9 @@ export function SwapWidget() {
           }
         },
         connector,
-        sessionKeyManager,
-        sessionKeys
+        executeWithSessionKey,
+        keyExists,
+        usableSessionKey
       )
 
       if (result.success) {
@@ -318,8 +319,9 @@ export function SwapWidget() {
           }
         },
         connector,
-        sessionKeyManager,
-        sessionKeys
+        executeWithSessionKey,
+        keyExists,
+        usableSessionKey
       )
 
       if (result.success) {
@@ -611,20 +613,29 @@ export function SwapWidget() {
       {/* Transaction Status */}
       {(approveHash || swapHash || smartTxResult?.hash) && (
         <div className="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm text-blue-300">
               {smartTxResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} {
                 approveHash && !swapHash ? 'approval' : 'swap'
               } tx:
             </span>
-            <a
-              href={`https://explorer.testnet.riselabs.xyz/tx/${smartTxResult?.hash || approveHash || swapHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-blue-400 hover:text-blue-300 font-mono"
-            >
-              {(smartTxResult?.hash || approveHash || swapHash)?.slice(0, 10)}...{(smartTxResult?.hash || approveHash || swapHash)?.slice(-6)} ↗
-            </a>
+            <div className="flex items-center gap-1">
+              <CopyableAddress
+                address={smartTxResult?.hash || approveHash || swapHash || ''}
+                prefix={8}
+                suffix={6}
+                className="text-blue-400"
+              />
+              <a
+                href={`https://explorer.testnet.riselabs.xyz/tx/${smartTxResult?.hash || approveHash || swapHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300"
+                title="View on explorer"
+              >
+                ↗
+              </a>
+            </div>
           </div>
           {(approveSuccess || swapSuccess || smartTxResult?.success) && (
             <div className="flex items-center mt-1">
@@ -635,8 +646,14 @@ export function SwapWidget() {
             </div>
           )}
           {smartTxResult?.usedSessionKey && smartTxResult?.keyId && (
-            <div className="text-blue-400 text-xs mt-1">
-              Used key: {smartTxResult.keyId}
+            <div className="text-blue-400 text-xs mt-1 flex items-center">
+              Used key:
+              <CopyableAddress
+                address={smartTxResult.keyId}
+                prefix={6}
+                suffix={6}
+                className="text-blue-400 ml-1"
+              />
             </div>
           )}
         </div>

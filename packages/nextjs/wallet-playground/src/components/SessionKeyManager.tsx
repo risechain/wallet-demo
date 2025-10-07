@@ -1,35 +1,43 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSessionKeys, useSessionKeyManager } from '@/hooks/useSessionKeys'
-import { formatTimeRemaining, formatPermissions, isSessionKeyUsable } from '@/utils/sessionKeyTransactions'
+import { useAccount } from 'wagmi'
+import { useSessionKeys } from '@/hooks/useSessionKeys'
+import { CopyableAddress } from './CopyableAddress'
+
+// Helper function to format time remaining
+function formatTimeRemaining(expiry: number): string {
+  const now = Math.floor(Date.now() / 1000)
+  const remaining = expiry - now
+
+  if (remaining <= 0) return 'Expired'
+
+  const minutes = Math.floor(remaining / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days > 0) return `${days} day${days !== 1 ? 's' : ''}`
+  if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''}`
+  return `${minutes} minute${minutes !== 1 ? 's' : ''}`
+}
 
 export function SessionKeyManager() {
-  const { sessionKeys, isConnected, address } = useSessionKeys()
-  const {
-    createSessionKey,
-    revokeSessionKey,
-    getSessionKeyPrivateKey,
-    isCreating,
-    isRevoking
-  } = useSessionKeyManager()
+  const { isConnected } = useAccount()
+  const { sessionKeys, createSessionKey, hasSessionKey, revokeSessionKey, fetchSessionKeys, isCreating, loading } = useSessionKeys()
 
+  const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null)
+
+  // Get current key state - this will update when hasSessionKey changes
+  const keyExists = hasSessionKey()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Clear messages after successful operations
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(''), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [success])
-
+  // Clear messages after some time
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(''), 5000)
@@ -52,29 +60,37 @@ export function SessionKeyManager() {
   const handleCreateKey = async () => {
     try {
       setError('')
-      setSuccess('')
-
-      await createSessionKey({
-        expiry: Math.floor(Date.now() / 1000) + 3600, // 1 hour
-      })
-
-      setSuccess('Session key created successfully!')
+      const result = await createSessionKey()
+      setResult(result)
     } catch (err: any) {
-      setError(err.message || 'Failed to create session key')
+      // Handle user rejection gracefully
+      if (err.message?.includes('user rejected') || err.message?.includes('User rejected')) {
+        setError('Session key creation was cancelled')
+      } else {
+        setError(err.message || 'Failed to create session key')
+      }
     }
   }
 
   const handleRevokeKey = async (keyId: string) => {
     try {
       setError('')
-      setSuccess('')
+      setRevokingKeyId(keyId)
 
       await revokeSessionKey(keyId)
-      setSuccess('Session key revoked successfully!')
+      setResult(null)
     } catch (err: any) {
-      setError(err.message || 'Failed to revoke session key')
+      // Handle user rejection gracefully
+      if (err.message?.includes('user rejected') || err.message?.includes('User rejected')) {
+        setError('Session key revocation was cancelled')
+      } else {
+        setError(err.message || 'Failed to revoke session key')
+      }
+    } finally {
+      setRevokingKeyId(null)
     }
   }
+
 
   if (!isConnected) {
     return (
@@ -100,9 +116,9 @@ export function SessionKeyManager() {
         </div>
       )}
 
-      {success && (
+      {result && (
         <div className="mb-4 p-3 bg-green-900/30 border border-green-600 rounded-lg">
-          <p className="text-sm text-green-300">{success}</p>
+          <p className="text-sm text-green-300">Session key created successfully!</p>
         </div>
       )}
 
@@ -127,9 +143,14 @@ export function SessionKeyManager() {
         </p>
       </div>
 
-      {/* Active Session Keys */}
+      {/* Session Keys List */}
       <div className="space-y-4">
-        {sessionKeys.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+            <p className="text-gray-400 text-sm">Loading session keys...</p>
+          </div>
+        ) : sessionKeys.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-gray-400 mb-2">
               <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,10 +162,8 @@ export function SessionKeyManager() {
           </div>
         ) : (
           sessionKeys.map((key) => {
-            const permissions = formatPermissions(key)
-            const isUsable = isSessionKeyUsable(key, getSessionKeyPrivateKey)
-            const timeRemaining = formatTimeRemaining(key.expiry)
             const isExpired = key.expiry <= Math.floor(Date.now() / 1000)
+            const timeRemaining = formatTimeRemaining(key.expiry)
 
             return (
               <div
@@ -152,7 +171,7 @@ export function SessionKeyManager() {
                 className={`p-4 border rounded-lg ${
                   isExpired
                     ? 'bg-gray-700/50 border-gray-600'
-                    : isUsable
+                    : key.hasPrivateKey
                     ? 'bg-gray-700 border-gray-600'
                     : 'bg-yellow-900/20 border-yellow-600'
                 }`}
@@ -163,7 +182,7 @@ export function SessionKeyManager() {
                     <div className={`w-2 h-2 rounded-full ${
                       isExpired
                         ? 'bg-gray-500'
-                        : isUsable
+                        : key.hasPrivateKey
                         ? 'bg-green-500'
                         : 'bg-yellow-500'
                     }`}></div>
@@ -174,11 +193,11 @@ export function SessionKeyManager() {
                   <span className={`text-xs px-2 py-1 rounded ${
                     isExpired
                       ? 'bg-gray-600 text-gray-300'
-                      : isUsable
+                      : key.hasPrivateKey
                       ? 'bg-green-600 text-green-100'
                       : 'bg-yellow-600 text-yellow-100'
                   }`}>
-                    {isExpired ? 'Expired' : isUsable ? 'Active' : 'No Private Key'}
+                    {isExpired ? 'Expired' : key.hasPrivateKey ? 'Active (Local)' : 'Active (Remote)'}
                   </span>
                 </div>
 
@@ -198,33 +217,53 @@ export function SessionKeyManager() {
 
                   <div>
                     <span className="text-gray-400">Public Key:</span>
-                    <div className="text-gray-300 font-mono text-xs break-all">
-                      {key.publicKey.slice(0, 20)}...{key.publicKey.slice(-20)}
+                    <div className="text-gray-300 text-xs mt-1">
+                      <CopyableAddress
+                        address={key.publicKey}
+                        prefix={10}
+                        suffix={10}
+                        className="text-gray-300"
+                      />
                     </div>
                   </div>
+
+                  {!key.hasPrivateKey && (
+                    <div className="text-yellow-400 text-xs">
+                      ⚠️ Private key not available locally - cannot use for transactions
+                    </div>
+                  )}
                 </div>
 
                 {/* Permissions */}
-                {permissions.calls.length > 0 && (
+                {key.permissions?.calls && key.permissions.calls.length > 0 && (
                   <div className="mt-3">
                     <div className="text-gray-400 text-xs mb-1">Allowed Contracts:</div>
                     <div className="space-y-1">
-                      {permissions.calls.map((call, idx) => (
-                        <div key={idx} className="text-xs text-gray-300">
-                          • {call.contract === 'Any contract' ? 'Any contract' : `${call.contract.slice(0, 8)}...${call.contract.slice(-6)}`}
+                      {key.permissions.calls.map((call, idx) => (
+                        <div key={idx} className="text-xs text-gray-300 flex items-center">
+                          • {call.to ? (
+                            <CopyableAddress
+                              address={call.to}
+                              prefix={6}
+                              suffix={4}
+                              className="text-gray-300 ml-1"
+                            />
+                          ) : (
+                            'Any contract'
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {permissions.spend.length > 0 && (
+                {key.permissions?.spend && key.permissions.spend.length > 0 && (
                   <div className="mt-3">
                     <div className="text-gray-400 text-xs mb-1">Spend Limits:</div>
                     <div className="space-y-1">
-                      {permissions.spend.map((spend, idx) => (
+                      {key.permissions.spend.map((spend, idx) => (
                         <div key={idx} className="text-xs text-gray-300">
-                          • {parseInt(spend.limit) / 1e18} tokens per {spend.period}
+                          • {spend.limit ? `${parseInt(spend.limit) / 1e18} tokens` : 'No limit'} per {spend.period || 'hour'}
                         </div>
                       ))}
                     </div>
@@ -236,10 +275,10 @@ export function SessionKeyManager() {
                   <div className="mt-4 pt-3 border-t border-gray-600">
                     <button
                       onClick={() => handleRevokeKey(key.id)}
-                      disabled={isRevoking === key.id}
+                      disabled={revokingKeyId === key.id}
                       className="w-full py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
                     >
-                      {isRevoking === key.id ? (
+                      {revokingKeyId === key.id ? (
                         <div className="flex items-center justify-center">
                           <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full mr-2"></div>
                           Revoking...
@@ -254,6 +293,17 @@ export function SessionKeyManager() {
             )
           })
         )}
+
+        {/* Refresh Button */}
+        <div className="flex justify-center">
+          <button
+            onClick={fetchSessionKeys}
+            disabled={loading}
+            className="px-4 py-2 text-sm text-gray-400 hover:text-gray-300 disabled:opacity-50 transition-colors"
+          >
+            {loading ? 'Refreshing...' : '🔄 Refresh Keys'}
+          </button>
+        </div>
       </div>
 
       {/* Info Section */}

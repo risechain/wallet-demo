@@ -1,21 +1,25 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAccount, useBalance, useWriteContract, useWaitForTransactionReceipt, useSendTransaction } from 'wagmi'
+import { useAccount, useBalance } from 'wagmi'
 import { parseUnits, parseEther, isAddress, formatUnits, encodeFunctionData } from 'viem'
 import { TOKENS, MintableERC20ABI } from '@/config/tokens'
-import { useSessionKeys, useSessionKeyManager } from '@/hooks/useSessionKeys'
+import { useSessionKeys } from '@/hooks/useSessionKeys'
 import { useSessionKeyPreference } from '@/context/SessionKeyContext'
 import { executeTransaction, extractContractAddresses, TransactionCall } from '@/utils/sessionKeyTransactions'
+import { CopyableAddress } from './CopyableAddress'
 
 type TokenSymbol = keyof typeof TOKENS
 
 export function TransferWidgetSimple() {
   const { address, isConnected, connector } = useAccount()
 
-  const { sessionKeys } = useSessionKeys()
-  const sessionKeyManager = useSessionKeyManager()
+  const { hasSessionKey, executeWithSessionKey, getUsableSessionKey } = useSessionKeys()
   const { preferSessionKey } = useSessionKeyPreference()
+
+  // Get current key state - this will update when hasSessionKey changes
+  const keyExists = hasSessionKey()
+  const usableSessionKey = getUsableSessionKey()
 
   const [mounted, setMounted] = useState(false)
   const [selectedToken, setSelectedToken] = useState<TokenSymbol | 'ETH'>('MockUSD')
@@ -24,10 +28,11 @@ export function TransferWidgetSimple() {
   const [error, setError] = useState('')
   const [isSmartTransferring, setIsSmartTransferring] = useState(false)
   const [smartTransferResult, setSmartTransferResult] = useState<{
-    hash: string
+    hash?: string
     success: boolean
     usedSessionKey?: boolean
     keyId?: string
+    error?: string
   } | null>(null)
 
   useEffect(() => {
@@ -43,38 +48,15 @@ export function TransferWidgetSimple() {
     token: token?.address,
   })
 
-  // For token transfers
-  const {
-    writeContract: transferToken,
-    data: transferTokenHash,
-    isPending: isTransferringToken,
-    error: transferTokenError
-  } = useWriteContract()
-
-  const { isSuccess: transferTokenSuccess } = useWaitForTransactionReceipt({
-    hash: transferTokenHash
-  })
-
-  // For ETH transfers
-  const {
-    sendTransaction: sendETH,
-    data: sendETHHash,
-    isPending: isSendingETH,
-    error: sendETHError
-  } = useSendTransaction()
-
-  const { isSuccess: sendETHSuccess } = useWaitForTransactionReceipt({
-    hash: sendETHHash
-  })
 
   // Reset form after successful transfer
   useEffect(() => {
-    if (transferTokenSuccess || sendETHSuccess || smartTransferResult?.success) {
+    if (smartTransferResult?.success) {
       setRecipient('')
       setAmount('')
       setError('')
     }
-  }, [transferTokenSuccess, sendETHSuccess, smartTransferResult?.success])
+  }, [smartTransferResult?.success])
 
   // Smart transfer function that uses session keys when available
   const handleSmartTransfer = async () => {
@@ -142,8 +124,9 @@ export function TransferWidgetSimple() {
           }
         },
         connector,
-        sessionKeyManager,
-        sessionKeys
+        executeWithSessionKey,
+        keyExists,
+        usableSessionKey
       )
 
       if (result.success) {
@@ -160,47 +143,6 @@ export function TransferWidgetSimple() {
     }
   }
 
-  const handleTransfer = () => {
-    setError('')
-
-    if (!isAddress(recipient)) {
-      setError('Invalid recipient address')
-      return
-    }
-
-    if (!amount || parseFloat(amount) <= 0) {
-      setError('Invalid amount')
-      return
-    }
-
-    try {
-      if (isETH) {
-        const value = parseEther(amount)
-        if (balance && value > balance.value) {
-          setError('Insufficient balance')
-          return
-        }
-        sendETH({
-          to: recipient as `0x${string}`,
-          value: value,
-        })
-      } else if (token) {
-        const parsedAmount = parseUnits(amount, token.decimals)
-        if (balance && parsedAmount > balance.value) {
-          setError('Insufficient balance')
-          return
-        }
-        transferToken({
-          address: token.address,
-          abi: MintableERC20ABI,
-          functionName: 'transfer',
-          args: [recipient as `0x${string}`, parsedAmount],
-        })
-      }
-    } catch (err) {
-      setError('Invalid amount format')
-    }
-  }
 
   if (!mounted) {
     return (
@@ -218,16 +160,12 @@ export function TransferWidgetSimple() {
     )
   }
 
-  const isTransferring = isTransferringToken || isSendingETH || isSmartTransferring
-  const transferHash = transferTokenHash || sendETHHash || smartTransferResult?.hash
-  const transferSuccess = transferTokenSuccess || sendETHSuccess || smartTransferResult?.success
-  const transferError = transferTokenError || sendETHError
+  const isTransferring = isSmartTransferring
+  const transferHash = smartTransferResult?.hash
+  const transferSuccess = smartTransferResult?.success
 
-  // Find optimal session key for current transaction
-  const contractAddresses = !isETH && token ? [token.address.toLowerCase()] : []
-  const optimalKey = sessionKeyManager.hasValidSessionKey(sessionKeys, {
-    calls: contractAddresses
-  })
+  // Check if we have an active session key (like playground)
+  const optimalKey = keyExists
 
   return (
     <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
@@ -317,9 +255,9 @@ export function TransferWidgetSimple() {
           </div>
         )}
 
-        {transferError && (
+        {smartTransferResult?.error && (
           <div className="p-3 bg-red-900/30 border border-red-600 rounded-lg text-red-300 text-sm">
-            Transfer failed: {transferError.message}
+            Transfer failed: {smartTransferResult.error}
           </div>
         )}
       </div>
@@ -345,21 +283,34 @@ export function TransferWidgetSimple() {
       {/* Transaction Status */}
       {transferHash && (
         <div className="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg text-sm">
-          <div className="text-blue-300">
-            {smartTransferResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} transfer tx:{' '}
+          <div className="text-blue-300 flex items-center flex-wrap gap-1">
+            <span>{smartTransferResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} transfer tx:</span>
+            <CopyableAddress
+              address={transferHash || ''}
+              prefix={8}
+              suffix={6}
+              className="text-blue-400"
+            />
             <a
               href={`https://explorer.testnet.riselabs.xyz/tx/${transferHash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 underline"
+              className="text-blue-400 hover:text-blue-300"
+              title="View on explorer"
             >
-              {transferHash.slice(0, 10)}...{transferHash.slice(-6)} ↗
+              ↗
             </a>
-            {transferSuccess && ' ✅'}
+            {transferSuccess && <span className="text-green-400">✅</span>}
           </div>
           {smartTransferResult?.usedSessionKey && smartTransferResult?.keyId && (
-            <div className="text-blue-400 text-xs mt-1">
-              Used key: {smartTransferResult.keyId}
+            <div className="text-blue-400 text-xs mt-1 flex items-center">
+              Used key:
+              <CopyableAddress
+                address={smartTransferResult.keyId}
+                prefix={6}
+                suffix={6}
+                className="text-blue-400 ml-1"
+              />
             </div>
           )}
         </div>
