@@ -5,10 +5,11 @@ import { useEffect, useState } from 'react'
 import { TOKENS, UNISWAP_CONTRACTS, MintableERC20ABI, UniswapV2RouterABI } from '@/config/tokens'
 import { formatUnits, parseUnits, encodeFunctionData } from 'viem'
 import { useSessionKeys, useSessionKeyManager } from '@/hooks/useSessionKeys'
+import { useSessionKeyPreference } from '@/context/SessionKeyContext'
 import {
-  executeWithSessionKey,
-  canExecuteCalls,
-  isSessionKeyUsable,
+  executeTransaction,
+  extractContractAddresses,
+  TransactionCall,
   RISE_CONTRACTS
 } from '@/utils/sessionKeyTransactions'
 
@@ -16,18 +17,24 @@ type TokenSymbol = keyof typeof TOKENS
 
 export function SwapWidget() {
   const { address, isConnected, connector } = useAccount()
+
   const [mounted, setMounted] = useState(false)
   const [fromToken, setFromToken] = useState<TokenSymbol>('MockUSD')
   const [toToken, setToToken] = useState<TokenSymbol>('MockToken')
   const [fromAmount, setFromAmount] = useState('')
   const [toAmount, setToAmount] = useState('')
   const [error, setError] = useState('')
-  const [isUsingSessionKey, setIsUsingSessionKey] = useState(false)
-  const [sessionKeyTxHash, setSessionKeyTxHash] = useState('')
+  const [smartTxResult, setSmartTxResult] = useState<{
+    hash: string
+    success: boolean
+    usedSessionKey?: boolean
+    keyId?: string
+  } | null>(null)
 
   // Session key hooks
   const { sessionKeys } = useSessionKeys()
-  const { getSessionKeyPrivateKey } = useSessionKeyManager()
+  const sessionKeyManager = useSessionKeyManager()
+  const { preferSessionKey } = useSessionKeyPreference()
 
   useEffect(() => {
     setMounted(true)
@@ -53,29 +60,15 @@ export function SwapWidget() {
     }
   })
 
-  // Check for usable session key
-  const getUsableSessionKey = () => {
-    for (const key of sessionKeys) {
-      if (!isSessionKeyUsable(key, getSessionKeyPrivateKey)) continue
+  // Check for usable session key using the updated approach
+  const requiredContracts = [
+    fromTokenConfig.address.toLowerCase(),
+    UNISWAP_CONTRACTS.router.toLowerCase()
+  ]
 
-      // Check if this key can execute our required contracts
-      const requiredContracts = [
-        fromTokenConfig.address,
-        UNISWAP_CONTRACTS.router
-      ]
-
-      const { canExecute } = canExecuteCalls(key,
-        requiredContracts.map(to => ({ to }))
-      )
-
-      if (canExecute) {
-        return key
-      }
-    }
-    return null
-  }
-
-  const usableSessionKey = getUsableSessionKey()
+  const usableSessionKey = sessionKeyManager.hasValidSessionKey(sessionKeys, {
+    calls: requiredContracts
+  })
 
   // Check allowance
   const {
@@ -207,13 +200,16 @@ export function SwapWidget() {
     }
   })
 
-  // Session key transaction functions
-  const handleSessionKeyApprove = async () => {
-    if (!usableSessionKey || !fromAmount || parseFloat(fromAmount) <= 0) return
+  // Smart approve function using the new executeTransaction
+  const handleSmartApprove = async () => {
+    if (!fromAmount || parseFloat(fromAmount) <= 0) return
 
-    const privateKey = getSessionKeyPrivateKey(usableSessionKey.publicKey)
-    if (!privateKey) {
-      setError('Session key private key not found')
+    setError('')
+    setSmartTxResult(null)
+
+    if (!connector) {
+      // Fallback to regular approve
+      handleApprove()
       return
     }
 
@@ -226,16 +222,27 @@ export function SwapWidget() {
         args: [UNISWAP_CONTRACTS.router, maxAmount],
       })
 
-      const calls = [{
+      const calls: TransactionCall[] = [{
         to: fromTokenConfig.address,
-        data: approveCallData
+        data: approveCallData,
+        value: '0x0'
       }]
 
-      console.log('🔑 Executing approve with session key')
-      const result = await executeWithSessionKey(usableSessionKey, privateKey, calls, connector)
+      const result = await executeTransaction(
+        calls,
+        {
+          preferSessionKey,
+          requiredPermissions: {
+            calls: [fromTokenConfig.address.toLowerCase()]
+          }
+        },
+        connector,
+        sessionKeyManager,
+        sessionKeys
+      )
 
       if (result.success) {
-        setSessionKeyTxHash(result.hash)
+        setSmartTxResult(result)
         // Refetch allowance after a delay
         setTimeout(() => {
           refetchAllowance()
@@ -245,22 +252,40 @@ export function SwapWidget() {
         setError(`Approval failed: ${result.error}`)
       }
     } catch (err: any) {
-      console.error('❌ Session key approval error:', err)
+      console.error('❌ Smart approve error:', err)
       setError(`Approval failed: ${err.message}`)
     }
   }
 
-  const handleSessionKeySwap = async () => {
-    if (!usableSessionKey || !fromAmount || !toAmount) return
+  // Smart swap function using the new executeTransaction
+  const handleSmartSwap = async () => {
+    if (!fromAmount || !toAmount) return
 
-    const privateKey = getSessionKeyPrivateKey(usableSessionKey.publicKey)
-    if (!privateKey) {
-      setError('Session key private key not found')
+    setError('')
+
+    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+      setError('Enter an amount')
+      return
+    }
+
+    if (!toAmount || parseFloat(toAmount) <= 0) {
+      setError('No quote available')
+      return
+    }
+
+    if (!connector) {
+      // Fallback to regular swap
+      handleSwap()
       return
     }
 
     try {
       const amountIn = parseUnits(fromAmount, fromTokenConfig.decimals)
+      if (fromBalance && amountIn > fromBalance.value) {
+        setError('Insufficient balance')
+        return
+      }
+
       const estimatedAmountOut = parseFloat(toAmount)
       const minAmountOut = estimatedAmountOut * 0.8 // 20% slippage
       const amountOutMin = parseUnits(minAmountOut.toString(), toTokenConfig.decimals)
@@ -278,16 +303,27 @@ export function SwapWidget() {
         ],
       })
 
-      const calls = [{
+      const calls: TransactionCall[] = [{
         to: UNISWAP_CONTRACTS.router,
-        data: swapCallData
+        data: swapCallData,
+        value: '0x0'
       }]
 
-      console.log('🔑 Executing swap with session key')
-      const result = await executeWithSessionKey(usableSessionKey, privateKey, calls, connector)
+      const result = await executeTransaction(
+        calls,
+        {
+          preferSessionKey,
+          requiredPermissions: {
+            calls: [UNISWAP_CONTRACTS.router.toLowerCase()]
+          }
+        },
+        connector,
+        sessionKeyManager,
+        sessionKeys
+      )
 
       if (result.success) {
-        setSessionKeyTxHash(result.hash)
+        setSmartTxResult(result)
         setFromAmount('')
         setToAmount('')
         setError('')
@@ -300,7 +336,7 @@ export function SwapWidget() {
         setError(`Swap failed: ${result.error}`)
       }
     } catch (err: any) {
-      console.error('❌ Session key swap error:', err)
+      console.error('❌ Smart swap error:', err)
       setError(`Swap failed: ${err.message}`)
     }
   }
@@ -363,7 +399,7 @@ export function SwapWidget() {
     setFromAmount('')
     setToAmount('')
     setError('')
-    setSessionKeyTxHash('')
+    setSmartTxResult(null)
   }
 
   const handleMaxClick = () => {
@@ -419,17 +455,15 @@ export function SwapWidget() {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-white">Swap</h3>
         {/* Session Key Status */}
-        {usableSessionKey ? (
-          <div className="flex items-center space-x-2 text-xs">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span className="text-green-400">🔑 Session Key Active</span>
-          </div>
-        ) : (
-          <div className="flex items-center space-x-2 text-xs">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-            <span className="text-yellow-400">👆 Using Passkey</span>
-          </div>
-        )}
+        <div className="text-xs text-gray-400">
+          {preferSessionKey && usableSessionKey ? (
+            <span className="text-green-400">🔑 Session key ready</span>
+          ) : preferSessionKey ? (
+            <span className="text-yellow-400">🔐 Will use passkey</span>
+          ) : (
+            <span className="text-gray-400">🔐 Passkey mode</span>
+          )}
+        </div>
       </div>
 
       {/* From Section */}
@@ -451,7 +485,7 @@ export function SwapWidget() {
                 onChange={(e) => {
                   setFromAmount(e.target.value)
                   setError('')
-                  setSessionKeyTxHash('')
+                  setSmartTxResult(null)
                 }}
                 className="w-full text-2xl font-semibold bg-transparent text-white placeholder-gray-400 border-none outline-none"
               />
@@ -542,7 +576,7 @@ export function SwapWidget() {
               </p>
             </div>
             <button
-              onClick={usableSessionKey ? handleSessionKeyApprove : handleApprove}
+              onClick={handleSmartApprove}
               disabled={isApproving || !fromAmount || parseFloat(fromAmount) <= 0}
               className="w-full py-4 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
             >
@@ -552,13 +586,13 @@ export function SwapWidget() {
                   Approving...
                 </div>
               ) : (
-                `${usableSessionKey ? '🔑' : '👆'} Approve ${fromTokenConfig.symbol}`
+                `${preferSessionKey && usableSessionKey ? '🔑' : '🔐'} Approve ${fromTokenConfig.symbol}`
               )}
             </button>
           </div>
         ) : (
           <button
-            onClick={usableSessionKey ? handleSessionKeySwap : handleSwap}
+            onClick={handleSmartSwap}
             disabled={!canSwap}
             className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
           >
@@ -568,37 +602,41 @@ export function SwapWidget() {
                 Swapping...
               </div>
             ) : (
-              `${usableSessionKey ? '🔑' : '👆'} Swap`
+              `${preferSessionKey && usableSessionKey ? '🔑' : '🔐'} Swap`
             )}
           </button>
         )}
       </div>
 
       {/* Transaction Status */}
-      {(approveHash || swapHash || sessionKeyTxHash) && (
+      {(approveHash || swapHash || smartTxResult?.hash) && (
         <div className="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg">
           <div className="flex items-center justify-between">
             <span className="text-sm text-blue-300">
-              {sessionKeyTxHash ? 'Session Key Transaction' :
-               approveHash && !swapHash ? 'Approval' : 'Swap'} transaction
+              {smartTxResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} {
+                approveHash && !swapHash ? 'approval' : 'swap'
+              } tx:
             </span>
             <a
-              href={`https://explorer.testnet.riselabs.xyz/tx/${sessionKeyTxHash || approveHash || swapHash}`}
+              href={`https://explorer.testnet.riselabs.xyz/tx/${smartTxResult?.hash || approveHash || swapHash}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-blue-400 hover:text-blue-300 font-mono"
             >
-              {(sessionKeyTxHash || approveHash || swapHash)?.slice(0, 10)}...{(sessionKeyTxHash || approveHash || swapHash)?.slice(-6)} ↗
+              {(smartTxResult?.hash || approveHash || swapHash)?.slice(0, 10)}...{(smartTxResult?.hash || approveHash || swapHash)?.slice(-6)} ↗
             </a>
           </div>
-          {(approveSuccess || swapSuccess || sessionKeyTxHash) && (
+          {(approveSuccess || swapSuccess || smartTxResult?.success) && (
             <div className="flex items-center mt-1">
               <svg className="w-4 h-4 text-green-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span className="text-sm text-green-400">
-                {sessionKeyTxHash ? 'Sent with Session Key' : 'Confirmed'}
-              </span>
+              <span className="text-sm text-green-400">Confirmed ✅</span>
+            </div>
+          )}
+          {smartTxResult?.usedSessionKey && smartTxResult?.keyId && (
+            <div className="text-blue-400 text-xs mt-1">
+              Used key: {smartTxResult.keyId}
             </div>
           )}
         </div>

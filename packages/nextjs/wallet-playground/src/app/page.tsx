@@ -5,6 +5,7 @@ import { TransferWidgetSimple } from "@/components/TransferWidgetSimple";
 import { SwapWidget } from "@/components/SwapWidget";
 import { MintButtonSimple } from "@/components/MintButtonSimple";
 import { SessionKeyManager } from "@/components/SessionKeyManager";
+import { SessionKeyToggle } from "@/components/SessionKeyToggle";
 import { useState } from "react";
 
 type WidgetType = 'transfer' | 'swap' | 'mint' | 'keys';
@@ -66,6 +67,11 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      {/* Session Key Toggle */}
+      <div className="max-w-4xl mx-auto px-6 pt-4">
+        <SessionKeyToggle />
+      </div>
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">

@@ -1,7 +1,7 @@
 'use client'
 
 import type { SessionKey } from '@/hooks/useSessionKeys'
-import { Hex } from 'viem'
+import { Hex } from 'ox'
 
 export interface TransactionCall {
   to: string
@@ -13,6 +13,16 @@ export interface SessionKeyTransactionResult {
   hash: string
   success: boolean
   error?: string
+  usedSessionKey?: boolean
+  keyId?: string
+}
+
+export interface TransactionOptions {
+  preferSessionKey?: boolean
+  requiredPermissions?: {
+    calls?: string[]
+    tokens?: string[]
+  }
 }
 
 /**
@@ -43,7 +53,14 @@ export async function executeWithSessionKey(
     }
 
     // Get current chain ID
-    const provider = await connector.getProvider()
+    let provider;
+    if (typeof connector.getProvider === 'function') {
+      provider = await connector.getProvider()
+    } else if (connector.request) {
+      provider = connector
+    } else {
+      throw new Error('No provider available from connector')
+    }
     const chainId = await provider.request({ method: 'eth_chainId' })
 
     // Step 1: Prepare the calls with the session key
@@ -52,7 +69,7 @@ export async function executeWithSessionKey(
       params: [
         {
           calls,
-          chainId,
+          chainId: Hex.fromNumber(parseInt(chainId, 16)),
           key: {
             publicKey: sessionKey.publicKey,
             type: sessionKey.type,
@@ -245,6 +262,196 @@ export function formatTimeRemaining(expiry: number): string {
 }
 
 /**
+ * Smart transaction execution that automatically chooses between session keys and passkeys
+ */
+export async function executeTransaction(
+  calls: TransactionCall[],
+  options: TransactionOptions = {},
+  connector?: any,
+  sessionKeyManager?: any,
+  sessionKeys?: SessionKey[]
+): Promise<SessionKeyTransactionResult> {
+  try {
+    console.log('🚀 Starting smart transaction execution:', {
+      calls: calls.length,
+      preferSessionKey: options.preferSessionKey,
+      requiredPermissions: options.requiredPermissions
+    })
+
+    if (!connector) {
+      throw new Error('Connector not available')
+    }
+
+    // Try to find a suitable session key if preferred or if permissions are specified
+    if (options.preferSessionKey !== false && sessionKeyManager && sessionKeys) {
+      const suitableKey = sessionKeyManager.hasValidSessionKey(sessionKeys, options.requiredPermissions)
+
+      if (suitableKey) {
+        console.log('🔑 Found suitable session key, attempting session key transaction')
+
+        const privateKey = sessionKeyManager.getSessionKeyPrivateKey(suitableKey.publicKey)
+        if (privateKey) {
+          try {
+            const result = await executeWithSessionKey(suitableKey, privateKey, calls, connector)
+            if (result.success) {
+              return {
+                ...result,
+                usedSessionKey: true,
+                keyId: suitableKey.id
+              }
+            }
+          } catch (sessionKeyError) {
+            console.warn('Session key transaction failed, falling back to passkey:', sessionKeyError)
+          }
+        }
+      }
+    }
+
+    // Fallback to regular passkey transaction
+    console.log('🔐 Using passkey transaction')
+    const result = await executeWithPasskey(calls, connector)
+    return {
+      ...result,
+      usedSessionKey: false
+    }
+
+  } catch (error: any) {
+    console.error('❌ Smart transaction execution failed:', error)
+    return {
+      hash: '',
+      success: false,
+      error: error.message || 'Unknown error',
+      usedSessionKey: false
+    }
+  }
+}
+
+/**
+ * Execute transaction using passkey (regular wallet flow)
+ */
+export async function executeWithPasskey(
+  calls: TransactionCall[],
+  connector: any
+): Promise<SessionKeyTransactionResult> {
+  try {
+    // Check if connector has getProvider method, if not use connector directly as provider
+    let provider;
+    if (typeof connector.getProvider === 'function') {
+      provider = await connector.getProvider()
+    } else if (connector.request) {
+      provider = connector
+    } else {
+      throw new Error('No provider available from connector')
+    }
+
+    // For regular transactions, we can use eth_sendTransaction or wallet_sendCalls
+    // depending on what's available. Let's try wallet_sendCalls first as it's more suitable for multiple calls
+
+    const results = await provider.request({
+      method: 'wallet_sendCalls',
+      params: [{
+        calls: calls.map(call => ({
+          to: call.to,
+          data: call.data || '0x',
+          value: call.value || '0x0'
+        }))
+      }]
+    })
+
+    const hash = results[0]?.id || results.hash
+    if (!hash) {
+      throw new Error('No transaction hash returned')
+    }
+
+    console.log('🚀 Passkey transaction sent:', hash)
+
+    return {
+      hash,
+      success: true,
+      usedSessionKey: false
+    }
+  } catch (error: any) {
+    console.error('❌ Passkey transaction failed:', error)
+    return {
+      hash: '',
+      success: false,
+      error: error.message || 'Passkey transaction failed',
+      usedSessionKey: false
+    }
+  }
+}
+
+/**
+ * Find the best session key for given transaction requirements
+ */
+export function findOptimalSessionKey(
+  sessionKeys: SessionKey[],
+  requirements?: {
+    calls?: string[]
+    tokens?: string[]
+  },
+  getPrivateKey?: (publicKey: string) => string | null
+): SessionKey | null {
+  if (sessionKeys.length === 0) return null
+
+  const now = Math.floor(Date.now() / 1000)
+  const validKeys = sessionKeys.filter(key => {
+    // Must not be expired
+    if (key.expiry <= now) return false
+
+    // Must have private key available
+    if (getPrivateKey && !getPrivateKey(key.publicKey)) return false
+
+    return true
+  })
+
+  if (validKeys.length === 0) return null
+
+  // If no specific requirements, return the key with the longest expiry
+  if (!requirements) {
+    return validKeys.reduce((best, current) =>
+      current.expiry > best.expiry ? current : best
+    )
+  }
+
+  // Find keys that satisfy the requirements
+  const suitableKeys = validKeys.filter(key => {
+    const { calls = [], tokens = [] } = requirements
+
+    // Check call permissions
+    if (calls.length > 0 && key.permissions?.calls) {
+      const allowedCalls = key.permissions.calls
+      const hasCallPermission = calls.every(callTo =>
+        allowedCalls.some(allowed =>
+          !allowed.to || allowed.to.toLowerCase() === callTo.toLowerCase()
+        )
+      )
+      if (!hasCallPermission) return false
+    }
+
+    // Check spend permissions
+    if (tokens.length > 0 && key.permissions?.spend) {
+      const allowedSpend = key.permissions.spend
+      const hasSpendPermission = tokens.every(token =>
+        allowedSpend.some(allowed =>
+          !allowed.token || allowed.token.toLowerCase() === token.toLowerCase()
+        )
+      )
+      if (!hasSpendPermission) return false
+    }
+
+    return true
+  })
+
+  if (suitableKeys.length === 0) return null
+
+  // Return the most suitable key (longest expiry among suitable keys)
+  return suitableKeys.reduce((best, current) =>
+    current.expiry > best.expiry ? current : best
+  )
+}
+
+/**
  * Contract addresses for permission checking
  */
 export const RISE_CONTRACTS = {
@@ -252,3 +459,21 @@ export const RISE_CONTRACTS = {
   MockToken: '0x6166a6e02b4CF0e1E0397082De1B4fc9CC9D6ceD',
   UniswapRouter: '0x6c10B45251F5D3e650bcfA9606c662E695Af97ea'
 } as const
+
+/**
+ * Helper to extract contract addresses from transaction calls
+ */
+export function extractContractAddresses(calls: TransactionCall[]): string[] {
+  return calls.map(call => call.to.toLowerCase())
+}
+
+/**
+ * Helper to check if transaction calls match session key permissions
+ */
+export function checkTransactionPermissions(
+  sessionKey: SessionKey,
+  calls: TransactionCall[]
+): { allowed: boolean; reason?: string } {
+  const { canExecute, reason } = canExecuteCalls(sessionKey, calls)
+  return { allowed: canExecute, reason }
+}

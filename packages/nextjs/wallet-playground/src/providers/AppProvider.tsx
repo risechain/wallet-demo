@@ -1,6 +1,7 @@
 'use client'
 
 import { WalletProvider } from './WalletProvider'
+import { SessionKeyProvider } from '@/context/SessionKeyContext'
 
 export function AppProvider({
   children,
@@ -9,7 +10,9 @@ export function AppProvider({
 }) {
   return (
     <WalletProvider>
-      {children}
+      <SessionKeyProvider>
+        {children}
+      </SessionKeyProvider>
     </WalletProvider>
   )
 }
