@@ -1,6 +1,6 @@
 'use client'
 
-import { useAccount, useBalance, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { useAccount, useBalance, useReadContract } from 'wagmi'
 import { useEffect, useState } from 'react'
 import { TOKENS, UNISWAP_CONTRACTS, MintableERC20ABI, UniswapV2RouterABI } from '@/config/tokens'
 import { formatUnits, parseUnits, encodeFunctionData } from 'viem'
@@ -25,6 +25,7 @@ export function SwapWidget() {
   const [fromAmount, setFromAmount] = useState('')
   const [toAmount, setToAmount] = useState('')
   const [error, setError] = useState('')
+  const [isExecuting, setIsExecuting] = useState(false)
   const [smartTxResult, setSmartTxResult] = useState<{
     hash: string
     success: boolean
@@ -161,44 +162,9 @@ export function SwapWidget() {
     }
   })()
 
-  // Traditional wagmi transactions (fallback)
-  const {
-    writeContract: approve,
-    data: approveHash,
-    isPending: isApproving,
-    error: approveError
-  } = useWriteContract()
 
-  const { isSuccess: approveSuccess } = useWaitForTransactionReceipt({
-    hash: approveHash,
-    onSuccess: () => {
-      refetchAllowance()
-      refetchFromBalance()
-      setTimeout(() => {
-        if (contractArgs) refetchQuote()
-      }, 1000)
-    }
-  })
 
-  const {
-    writeContract: swap,
-    data: swapHash,
-    isPending: isSwapping,
-    error: swapError
-  } = useWriteContract()
 
-  const { isSuccess: swapSuccess } = useWaitForTransactionReceipt({
-    hash: swapHash,
-    onSuccess: () => {
-      setFromAmount('')
-      setToAmount('')
-      setError('')
-      setTimeout(() => {
-        refetchFromBalance()
-        refetchToBalance()
-      }, 2000)
-    }
-  })
 
   // Smart approve function using the new executeTransaction
   const handleSmartApprove = async () => {
@@ -206,10 +172,11 @@ export function SwapWidget() {
 
     setError('')
     setSmartTxResult(null)
+    setIsExecuting(true)
 
     if (!connector) {
-      // Fallback to regular approve
-      handleApprove()
+      console.error('No connector available for smart approval')
+      setIsExecuting(false)
       return
     }
 
@@ -255,6 +222,8 @@ export function SwapWidget() {
     } catch (err: any) {
       console.error('❌ Smart approve error:', err)
       setError(`Approval failed: ${err.message}`)
+    } finally {
+      setIsExecuting(false)
     }
   }
 
@@ -263,20 +232,23 @@ export function SwapWidget() {
     if (!fromAmount || !toAmount) return
 
     setError('')
+    setIsExecuting(true)
 
     if (!fromAmount || parseFloat(fromAmount) <= 0) {
       setError('Enter an amount')
+      setIsExecuting(false)
       return
     }
 
     if (!toAmount || parseFloat(toAmount) <= 0) {
       setError('No quote available')
+      setIsExecuting(false)
       return
     }
 
     if (!connector) {
-      // Fallback to regular swap
-      handleSwap()
+      setError('No connector available')
+      setIsExecuting(false)
       return
     }
 
@@ -284,6 +256,7 @@ export function SwapWidget() {
       const amountIn = parseUnits(fromAmount, fromTokenConfig.decimals)
       if (fromBalance && amountIn > fromBalance.value) {
         setError('Insufficient balance')
+        setIsExecuting(false)
         return
       }
 
@@ -340,60 +313,11 @@ export function SwapWidget() {
     } catch (err: any) {
       console.error('❌ Smart swap error:', err)
       setError(`Swap failed: ${err.message}`)
+    } finally {
+      setIsExecuting(false)
     }
   }
 
-  // Traditional handlers (fallback)
-  const handleApprove = async () => {
-    if (!fromAmount || parseFloat(fromAmount) <= 0) return
-    try {
-      const maxAmount = parseUnits('1000000000', fromTokenConfig.decimals)
-      await approve({
-        address: fromTokenConfig.address,
-        abi: MintableERC20ABI,
-        functionName: 'approve',
-        args: [UNISWAP_CONTRACTS.router, maxAmount],
-      })
-    } catch (err: any) {
-      setError(`Approval failed: ${err.shortMessage || err.message}`)
-    }
-  }
-
-  const handleSwap = async () => {
-    setError('')
-
-    if (!fromAmount || parseFloat(fromAmount) <= 0) {
-      setError('Enter an amount')
-      return
-    }
-
-    if (!toAmount || parseFloat(toAmount) <= 0) {
-      setError('No quote available')
-      return
-    }
-
-    try {
-      const amountIn = parseUnits(fromAmount, fromTokenConfig.decimals)
-      if (fromBalance && amountIn > fromBalance.value) {
-        setError('Insufficient balance')
-        return
-      }
-
-      const estimatedAmountOut = parseFloat(toAmount)
-      const minAmountOut = estimatedAmountOut * 0.8
-      const amountOutMin = parseUnits(minAmountOut.toString(), toTokenConfig.decimals)
-      const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 20)
-
-      await swap({
-        address: UNISWAP_CONTRACTS.router,
-        abi: UniswapV2RouterABI,
-        functionName: 'swapExactTokensForTokens',
-        args: [amountIn, amountOutMin, [fromTokenConfig.address, toTokenConfig.address], address, deadline],
-      })
-    } catch (err: any) {
-      setError(`Swap failed: ${err.shortMessage || err.message || 'Unknown error'}`)
-    }
-  }
 
   const handleTokenSwitch = () => {
     setFromToken(toToken)
@@ -437,7 +361,7 @@ export function SwapWidget() {
     )
   }
 
-  const isTransacting = isApproving || isSwapping
+  const isTransacting = false // No longer using wagmi transactions
   const canSwap = Boolean(
     fromAmount &&
     toAmount &&
@@ -467,6 +391,53 @@ export function SwapWidget() {
           )}
         </div>
       </div>
+
+      {/* Transaction Success Popup */}
+      {smartTxResult?.hash && (
+        <div className="mb-4 p-3 bg-green-900/30 border border-green-600 rounded-lg">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-sm text-green-300">
+              {smartTxResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} transaction successful!
+            </span>
+            <div className="flex items-center gap-1">
+              <CopyableAddress
+                address={smartTxResult?.hash || ''}
+                prefix={8}
+                suffix={6}
+                className="text-green-400"
+              />
+              <a
+                href={`https://explorer.testnet.riselabs.xyz/tx/${smartTxResult?.hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-400 hover:text-green-300"
+                title="View on explorer"
+              >
+                ↗
+              </a>
+            </div>
+          </div>
+          {smartTxResult?.success && (
+            <div className="flex items-center mt-1">
+              <svg className="w-4 h-4 text-green-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-sm text-green-400">Transaction confirmed ✅</span>
+            </div>
+          )}
+          {smartTxResult?.usedSessionKey && smartTxResult?.keyId && (
+            <div className="text-green-400 text-xs mt-1 flex items-center">
+              Used key:
+              <CopyableAddress
+                address={smartTxResult.keyId}
+                prefix={6}
+                suffix={6}
+                className="text-green-400 ml-1"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* From Section */}
       <div className="mb-1">
@@ -559,18 +530,10 @@ export function SwapWidget() {
         </div>
       )}
 
-      {/* Transaction Error */}
-      {(approveError || swapError) && (
-        <div className="mb-4 p-3 bg-red-900/30 border border-red-600 rounded-lg">
-          <p className="text-sm text-red-300">
-            {approveError?.message || swapError?.message}
-          </p>
-        </div>
-      )}
 
       {/* Action Button */}
       <div className="space-y-3">
-        {needsApproval && !approveSuccess ? (
+        {needsApproval && !smartTxResult?.success ? (
           <div className="space-y-3">
             <div className="p-3 bg-yellow-900/30 border border-yellow-600 rounded-lg">
               <p className="text-sm text-yellow-300">
@@ -579,10 +542,10 @@ export function SwapWidget() {
             </div>
             <button
               onClick={handleSmartApprove}
-              disabled={isApproving || !fromAmount || parseFloat(fromAmount) <= 0}
+              disabled={isExecuting || !fromAmount || parseFloat(fromAmount) <= 0}
               className="w-full py-4 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
             >
-              {isApproving ? (
+              {isExecuting ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
                   Approving...
@@ -595,10 +558,10 @@ export function SwapWidget() {
         ) : (
           <button
             onClick={handleSmartSwap}
-            disabled={!canSwap}
+            disabled={isExecuting || !canSwap}
             className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
           >
-            {isSwapping ? (
+            {isExecuting ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
                 Swapping...
@@ -610,54 +573,6 @@ export function SwapWidget() {
         )}
       </div>
 
-      {/* Transaction Status */}
-      {(approveHash || swapHash || smartTxResult?.hash) && (
-        <div className="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="text-sm text-blue-300">
-              {smartTxResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} {
-                approveHash && !swapHash ? 'approval' : 'swap'
-              } tx:
-            </span>
-            <div className="flex items-center gap-1">
-              <CopyableAddress
-                address={smartTxResult?.hash || approveHash || swapHash || ''}
-                prefix={8}
-                suffix={6}
-                className="text-blue-400"
-              />
-              <a
-                href={`https://explorer.testnet.riselabs.xyz/tx/${smartTxResult?.hash || approveHash || swapHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300"
-                title="View on explorer"
-              >
-                ↗
-              </a>
-            </div>
-          </div>
-          {(approveSuccess || swapSuccess || smartTxResult?.success) && (
-            <div className="flex items-center mt-1">
-              <svg className="w-4 h-4 text-green-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="text-sm text-green-400">Confirmed ✅</span>
-            </div>
-          )}
-          {smartTxResult?.usedSessionKey && smartTxResult?.keyId && (
-            <div className="text-blue-400 text-xs mt-1 flex items-center">
-              Used key:
-              <CopyableAddress
-                address={smartTxResult.keyId}
-                prefix={6}
-                suffix={6}
-                className="text-blue-400 ml-1"
-              />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

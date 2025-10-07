@@ -87,6 +87,7 @@ export function TransferWidgetSimple() {
         const value = parseEther(amount)
         if (balance && value > balance.value) {
           setError('Insufficient balance')
+          setIsSmartTransferring(false)
           return
         }
 
@@ -99,6 +100,7 @@ export function TransferWidgetSimple() {
         const parsedAmount = parseUnits(amount, token.decimals)
         if (balance && parsedAmount > balance.value) {
           setError('Insufficient balance')
+          setIsSmartTransferring(false)
           return
         }
 
@@ -181,6 +183,51 @@ export function TransferWidgetSimple() {
           )}
         </div>
       </div>
+
+      {/* Transaction Success Popup */}
+      {transferHash && transferSuccess && (
+        <div className="mb-4 p-3 bg-green-900/30 border border-green-600 rounded-lg">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-sm text-green-300">
+              {smartTransferResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} transfer successful!
+            </span>
+            <div className="flex items-center gap-1">
+              <CopyableAddress
+                address={transferHash || ''}
+                prefix={8}
+                suffix={6}
+                className="text-green-400"
+              />
+              <a
+                href={`https://explorer.testnet.riselabs.xyz/tx/${transferHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-400 hover:text-green-300"
+                title="View on explorer"
+              >
+                ↗
+              </a>
+            </div>
+          </div>
+          <div className="flex items-center mt-1">
+            <svg className="w-4 h-4 text-green-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="text-sm text-green-400">Transfer confirmed ✅</span>
+          </div>
+          {smartTransferResult?.usedSessionKey && smartTransferResult?.keyId && (
+            <div className="text-green-400 text-xs mt-1 flex items-center">
+              Used key:
+              <CopyableAddress
+                address={smartTransferResult.keyId}
+                prefix={6}
+                suffix={6}
+                className="text-green-400 ml-1"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Token Selector */}
       <div className="mb-6">
@@ -280,41 +327,6 @@ export function TransferWidgetSimple() {
         )}
       </button>
 
-      {/* Transaction Status */}
-      {transferHash && (
-        <div className="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg text-sm">
-          <div className="text-blue-300 flex items-center flex-wrap gap-1">
-            <span>{smartTransferResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} transfer tx:</span>
-            <CopyableAddress
-              address={transferHash || ''}
-              prefix={8}
-              suffix={6}
-              className="text-blue-400"
-            />
-            <a
-              href={`https://explorer.testnet.riselabs.xyz/tx/${transferHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300"
-              title="View on explorer"
-            >
-              ↗
-            </a>
-            {transferSuccess && <span className="text-green-400">✅</span>}
-          </div>
-          {smartTransferResult?.usedSessionKey && smartTransferResult?.keyId && (
-            <div className="text-blue-400 text-xs mt-1 flex items-center">
-              Used key:
-              <CopyableAddress
-                address={smartTransferResult.keyId}
-                prefix={6}
-                suffix={6}
-                className="text-blue-400 ml-1"
-              />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

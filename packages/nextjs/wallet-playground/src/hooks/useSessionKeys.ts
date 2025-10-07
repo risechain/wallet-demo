@@ -3,7 +3,7 @@
 import { useAccount } from 'wagmi'
 import { useState, useCallback, useEffect } from 'react'
 import { TOKENS, UNISWAP_CONTRACTS } from '@/config/tokens'
-import { Hex, Value, P256, PublicKey, Signature, Bytes } from 'ox'
+import { Hex, Value, P256, PublicKey, Signature } from 'ox'
 import { Hooks } from 'porto/wagmi'
 
 export interface SessionKey {
@@ -213,7 +213,7 @@ export function useSessionKeys() {
     // Sign like playground
     const signature = Signature.toHex(
       P256.sign({
-        payload: Bytes.fromHex(digest),
+        payload: digest as `0x${string}`,
         privateKey: keyPair.privateKey,
       })
     )

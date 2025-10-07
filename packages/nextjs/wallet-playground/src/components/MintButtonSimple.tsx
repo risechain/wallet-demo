@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { useAccount, useReadContract } from 'wagmi'
 import { TOKENS, MintableERC20ABI } from '@/config/tokens'
 import { useSessionKeys } from '@/hooks/useSessionKeys'
 import { useSessionKeyPreference } from '@/context/SessionKeyContext'
@@ -35,16 +35,6 @@ export function MintButtonSimple() {
     setMounted(true)
   }, [])
 
-  const {
-    writeContract: mint,
-    data: mintHash,
-    isPending: isMinting,
-    error: mintError
-  } = useWriteContract()
-
-  const { isSuccess: mintSuccess } = useWaitForTransactionReceipt({
-    hash: mintHash
-  })
 
   // Check if user has already minted each token
   const { data: hasMintedMockUSD } = useReadContract({
@@ -63,11 +53,11 @@ export function MintButtonSimple() {
 
   // Reset state after successful mint
   useEffect(() => {
-    if (mintSuccess || smartMintResult?.success) {
+    if (smartMintResult?.success) {
       setCurrentToken(null)
       setTimeout(() => setIsOpen(false), 2000) // Close after 2 seconds
     }
-  }, [mintSuccess, smartMintResult?.success])
+  }, [smartMintResult?.success])
 
   // Smart mint function that uses session keys when available
   const handleSmartMint = async (tokenSymbol: 'MockUSD' | 'MockToken') => {
@@ -76,12 +66,7 @@ export function MintButtonSimple() {
     setSmartMintResult(null)
 
     if (!connector) {
-      // Fallback to regular mint
-      mint({
-        address: token.address,
-        abi: MintableERC20ABI,
-        functionName: 'mintOnce',
-      })
+      console.error('No connector available for minting')
       return
     }
 
@@ -117,37 +102,18 @@ export function MintButtonSimple() {
       if (result.success) {
         setSmartMintResult(result)
       } else {
-        // Fallback to regular mint on error
-        mint({
-          address: token.address,
-          abi: MintableERC20ABI,
-          functionName: 'mintOnce',
-        })
+        console.error('Session key mint failed:', result.error)
+        // Could add UI error handling here if needed
       }
 
     } catch (err: any) {
       console.error('Smart mint error:', err)
-      // Fallback to regular mint
-      mint({
-        address: token.address,
-        abi: MintableERC20ABI,
-        functionName: 'mintOnce',
-      })
+      // Could add UI error handling here if needed
     } finally {
       setIsSmartMinting(false)
     }
   }
 
-  const handleMint = (tokenSymbol: 'MockUSD' | 'MockToken') => {
-    const token = TOKENS[tokenSymbol]
-    setCurrentToken(tokenSymbol)
-
-    mint({
-      address: token.address,
-      abi: MintableERC20ABI,
-      functionName: 'mintOnce',
-    })
-  }
 
   if (!mounted || !isConnected) {
     return null
@@ -180,10 +146,10 @@ export function MintButtonSimple() {
               </div>
               <button
                 onClick={() => handleSmartMint('MockUSD')}
-                disabled={(isMinting || isSmartMinting) && currentToken === 'MockUSD' || hasMintedMockUSD}
+                disabled={isSmartMinting && currentToken === 'MockUSD' || hasMintedMockUSD}
                 className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
               >
-                {hasMintedMockUSD ? 'Already Minted' : (isMinting || isSmartMinting) && currentToken === 'MockUSD' ? 'Minting...' : 'Mint'}
+                {hasMintedMockUSD ? 'Already Minted' : isSmartMinting && currentToken === 'MockUSD' ? 'Minting...' : 'Mint'}
               </button>
             </div>
 
@@ -195,27 +161,27 @@ export function MintButtonSimple() {
               </div>
               <button
                 onClick={() => handleSmartMint('MockToken')}
-                disabled={(isMinting || isSmartMinting) && currentToken === 'MockToken' || hasMintedMockToken}
+                disabled={isSmartMinting && currentToken === 'MockToken' || hasMintedMockToken}
                 className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
               >
-                {hasMintedMockToken ? 'Already Minted' : (isMinting || isSmartMinting) && currentToken === 'MockToken' ? 'Minting...' : 'Mint'}
+                {hasMintedMockToken ? 'Already Minted' : isSmartMinting && currentToken === 'MockToken' ? 'Minting...' : 'Mint'}
               </button>
             </div>
           </div>
 
           {/* Transaction Status */}
-          {(mintHash || smartMintResult?.hash) && (
+          {smartMintResult?.hash && (
             <div className="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg text-sm">
               <div className="text-blue-300 flex items-center flex-wrap gap-1">
                 <span>{smartMintResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} {currentToken} mint tx:</span>
                 <CopyableAddress
-                  address={mintHash || smartMintResult?.hash || ''}
+                  address={smartMintResult?.hash || ''}
                   prefix={8}
                   suffix={6}
                   className="text-blue-400"
                 />
                 <a
-                  href={`https://explorer.testnet.riselabs.xyz/tx/${mintHash || smartMintResult?.hash}`}
+                  href={`https://explorer.testnet.riselabs.xyz/tx/${smartMintResult?.hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:text-blue-300"
@@ -223,7 +189,7 @@ export function MintButtonSimple() {
                 >
                   ↗
                 </a>
-                {(mintSuccess || smartMintResult?.success) && <span className="text-green-400">✅</span>}
+                {smartMintResult?.success && <span className="text-green-400">✅</span>}
               </div>
               {smartMintResult?.usedSessionKey && smartMintResult?.keyId && (
                 <div className="text-blue-400 text-xs mt-1 flex items-center">
@@ -239,12 +205,6 @@ export function MintButtonSimple() {
             </div>
           )}
 
-          {/* Error Message */}
-          {mintError && (
-            <div className="mt-3 p-3 bg-red-900/30 border border-red-600 rounded-lg text-red-300 text-sm">
-              Error: {mintError.message}
-            </div>
-          )}
 
           <button
             onClick={() => setIsOpen(false)}
