@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "../styles/globals.css";
 import { AppProvider } from "@/providers/AppProvider";
+
+import "@/styles/globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,6 +17,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "RISE Wallet Playground",
   description: "A minimal wallet interface for RISE testnet",
+  icons: {
+    icon: [
+      { url: "/favicon_light.svg", media: "(prefers-color-scheme: light)" },
+      { url: "/favicon_dark.svg", media: "(prefers-color-scheme: dark)" },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -24,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

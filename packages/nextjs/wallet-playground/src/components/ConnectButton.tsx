@@ -1,34 +1,41 @@
-'use client'
+"use client";
 
-import { useConnect, useAccount, useDisconnect, useConnectors, useBalance } from 'wagmi'
-import { formatEther } from 'viem'
-import { useEffect, useState } from 'react'
+import {
+  useConnect,
+  useAccount,
+  useDisconnect,
+  useConnectors,
+  useBalance,
+} from "wagmi";
+import { formatEther } from "viem";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export function ConnectButton() {
-  const { address, isConnected } = useAccount()
-  const { connect, isPending } = useConnect()
-  const { disconnect } = useDisconnect()
-  const connectors = useConnectors()
-  const { data: balance } = useBalance({ address })
-  const [mounted, setMounted] = useState(false)
+  const { address, isConnected } = useAccount();
+  const { connect, isPending } = useConnect();
+  const { disconnect } = useDisconnect();
+  const connectors = useConnectors();
+  const { data: balance } = useBalance({ address });
+  const [mounted, setMounted] = useState(false);
 
   // Fix hydration mismatch by only rendering after client mount
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  const portoConnector = connectors.find(c => c.id === 'xyz.ithaca.porto')
+  const portoConnector = connectors.find((c) => c.id === "xyz.ithaca.porto");
 
   // Prevent hydration mismatch by showing loading state until mounted
   if (!mounted) {
     return (
       <button
         disabled
-        className="px-6 py-2 bg-gray-800 text-gray-400 rounded-lg border border-gray-700 opacity-50 cursor-not-allowed"
+        className="px-6 py-2 bg-background text-gray-400 rounded-lg border border-gray-700 opacity-50 cursor-not-allowed"
       >
         Loading...
       </button>
-    )
+    );
   }
 
   if (isConnected && address) {
@@ -52,7 +59,7 @@ export function ConnectButton() {
           Disconnect
         </button>
       </div>
-    )
+    );
   }
 
   if (isPending) {
@@ -63,19 +70,20 @@ export function ConnectButton() {
       >
         Check Prompt...
       </button>
-    )
+    );
   }
 
   if (!portoConnector) {
-    return null
+    return null;
   }
 
   return (
-    <button
+    <Button
       onClick={() => connect({ connector: portoConnector })}
-      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+      variant="secondary"
+      // className="px-6 py-2 bg-primary hover:bg-secondary text-white rounded-lg font-medium transition-colors"
     >
       Connect RISE Wallet
-    </button>
-  )
+    </Button>
+  );
 }

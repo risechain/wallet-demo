@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@import "../styles/base/index.css";
+@import "../styles/keyframes.css";
+
 @plugin "@tailwindcss/container-queries";
 
 @custom-variant dark (&:is(.dark *));
@@ -52,10 +55,13 @@
   --color-ring: var(--ring);
 
   --color-sidebar: var(--gray-1);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--gray-6);
+  --color-sidebar-accent-foreground: var(--gray-12);
+  --color-sidebar-border: var(--gray-6);
+  --color-sidebar-foreground: var(--gray-12);
+  --color-sidebar-primary: var(--purple-9);
+  --color-sidebar-primary-foreground: var(--gray-1);
+  --color-sidebar-ring: var(--ring);
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
