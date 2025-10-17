@@ -20,8 +20,8 @@
   --animate-collapsible-down: collapsible-down 200ms ease-out;
   --animate-collapsible-up: collapsible-up 200ms ease-out;
 
-  --color-accent: var(--gray-6);
-  --color-accent-foreground: var(--gray-contrast);
+  --color-accent: var(--gray-3);
+  --color-accent-foreground: var(--gray-12);
 
   --color-background: var(--gray-1);
   --color-foreground: var(--gray-12);
@@ -43,7 +43,7 @@
   --color-destructive: #d4183d;
   --color-destructive-foreground: var(--gray-1);
 
-  --color-success: #00c950;
+  --color-success: #009933;
   --color-success-foreground: var(--gray-1);
 
   --color-muted: var(--gray-6);
@@ -55,8 +55,8 @@
   --color-ring: var(--ring);
 
   --color-sidebar: var(--gray-1);
-  --color-sidebar-accent: var(--gray-6);
-  --color-sidebar-accent-foreground: var(--gray-12);
+  --color-sidebar-accent: var(--purple-9);
+  --color-sidebar-accent-foreground: var(--gray-1);
   --color-sidebar-border: var(--gray-6);
   --color-sidebar-foreground: var(--gray-12);
   --color-sidebar-primary: var(--purple-9);

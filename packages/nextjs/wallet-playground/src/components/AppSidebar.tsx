@@ -1,14 +1,9 @@
 "use client";
 
-import {
-  ArrowLeftRight,
-  Coins,
-  Key,
-  Send,
-} from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
+import { ArrowLeftRight, Coins, Key, Send } from "lucide-react";
+import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +12,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
+} from "@ui/sidebar";
+import { SessionKeyToggle } from "./SessionKeyToggle";
+import { Separator } from "@ui/separator";
+import Image from "next/image";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 const items = [
   {
@@ -44,10 +44,37 @@ const items = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { resolvedTheme } = useTheme();
+
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   return (
     <Sidebar>
+      <div className="relative shrink-0">
+        <div aria-hidden="true" className="absolute inset-0" />
+        <div className="flex items-center p-4">
+          <Image
+            src={
+              resolvedTheme === "light" && hasMounted
+                ? "/icons/rise-black.svg"
+                : "/icons/rise-white.svg"
+            }
+            width={92}
+            height={120}
+            alt="RISE Logo"
+            priority
+          />
+        </div>
+      </div>
+
       <SidebarContent>
+        <Separator />
+        <SessionKeyToggle />
+        <Separator />
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -56,7 +83,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild isActive={pathname === item.url}>
                     <Link href={item.url}>
                       <item.icon />
-                      <span>{item.title}</span>
+                      <span className="text-inherit">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

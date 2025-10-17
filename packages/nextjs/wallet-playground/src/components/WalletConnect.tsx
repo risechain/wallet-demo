@@ -10,8 +10,9 @@ import {
 import { formatEther } from "viem";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "./ui/separator";
 
-export function ConnectButton() {
+export function WalletConnect() {
   const { address, isConnected } = useAccount();
   const { connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
@@ -40,36 +41,26 @@ export function ConnectButton() {
 
   if (isConnected && address) {
     return (
-      <div className="flex items-center gap-3 px-4 py-2 bg-gray-800 rounded-lg border border-gray-700">
-        <div className="text-sm">
-          <div className="text-green-400 font-medium">Connected</div>
-          <div className="text-gray-300 font-mono text-xs">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 text-sm">
+          <p>
             {address.slice(0, 6)}...{address.slice(-4)}
-          </div>
+          </p>
           {balance && (
-            <div className="text-gray-400 text-xs">
-              {parseFloat(formatEther(balance.value)).toFixed(4)} ETH
-            </div>
+            <>
+              <Separator orientation="vertical" className="min-h-4" />
+              <p className="text-muted-foreground">
+                {Number(formatEther(balance.value)).toFixed(4)}{" "}
+                <span className="font-bold">{balance.symbol}</span>
+              </p>
+            </>
           )}
         </div>
-        <button
-          onClick={() => disconnect()}
-          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
-        >
+        <Separator orientation="vertical" className="min-h-6" />
+        <Button onClick={() => disconnect()} variant="outline">
           Disconnect
-        </button>
+        </Button>
       </div>
-    );
-  }
-
-  if (isPending) {
-    return (
-      <button
-        disabled
-        className="px-4 py-2 bg-gray-800 text-gray-400 rounded-lg border border-gray-700 opacity-50 cursor-not-allowed"
-      >
-        Check Prompt...
-      </button>
     );
   }
 
@@ -80,10 +71,10 @@ export function ConnectButton() {
   return (
     <Button
       onClick={() => connect({ connector: portoConnector })}
-      variant="secondary"
-      // className="px-6 py-2 bg-primary hover:bg-secondary text-white rounded-lg font-medium transition-colors"
+      disabled={isPending}
+      className="min-w-40"
     >
-      Connect RISE Wallet
+      {isPending ? "Connecting..." : "Connect Wallet"}
     </Button>
   );
 }

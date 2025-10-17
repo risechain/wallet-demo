@@ -9,9 +9,9 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { ConnectButton } from "@/components/ConnectButton";
-import { SessionKeyToggle } from "@/components/SessionKeyToggle";
+import { WalletConnect } from "@/components/WalletConnect";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Separator } from "@ui/separator";
 
 export function AppProvider({
   children,
@@ -24,7 +24,7 @@ export function AppProvider({
       storageKey="rise-wallet-demo-theme"
       attribute="class"
       enableSystem
-      // disableTransitionOnChange
+      disableTransitionOnChange
     >
       <WalletProvider>
         <SessionKeyProvider>
@@ -35,17 +35,13 @@ export function AppProvider({
               <header className="bg-background border-b border-border sticky top-0 z-10">
                 <div className="flex justify-between items-center h-16 px-6">
                   <SidebarTrigger />
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-4">
+                    <WalletConnect />
+                    <Separator orientation="vertical" className="min-h-6" />
                     <ThemeToggle />
-                    <ConnectButton />
                   </div>
                 </div>
               </header>
-
-              {/* Session Key Toggle */}
-              <div className="px-6 pt-4">
-                <SessionKeyToggle />
-              </div>
 
               {/* Main Content */}
               <main className="px-6 py-8">
