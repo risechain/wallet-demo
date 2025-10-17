@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx shadcn:*)",
+      "Bash(npx shadcn@latest add typography -y)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
