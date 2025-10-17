@@ -9,17 +9,19 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@ui/sidebar";
-import { SessionInfo } from "./SessionInfo";
 import { Separator } from "@ui/separator";
-import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
-const items = [
+import Image from "next/image";
+import { ThemeToggle } from "./ThemeToggle";
+
+const demoItems = [
   {
     title: "Transfer",
     url: "/transfer",
@@ -74,9 +76,10 @@ export function AppSidebar() {
       <SidebarContent>
         <Separator />
         <SidebarGroup>
+          <SidebarGroupLabel>Demo</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {demoItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={pathname === item.url}>
                     <Link href={item.url}>
@@ -86,6 +89,20 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <Separator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Preference</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="px-2">
+              <SidebarMenuItem className="flex justify-between items-center">
+                <p>Theme</p>
+                <ThemeToggle />
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

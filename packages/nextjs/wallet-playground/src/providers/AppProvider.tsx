@@ -25,7 +25,7 @@ export function AppProvider({
       storageKey="rise-wallet-demo-theme"
       attribute="class"
       enableSystem
-      disableTransitionOnChange
+      // disableTransitionOnChange
     >
       <WalletProvider>
         <SessionKeyProvider>
@@ -41,8 +41,6 @@ export function AppProvider({
                   </div>
                   <div className="flex items-center gap-4">
                     <WalletConnect />
-                    <Separator orientation="vertical" className="min-h-6" />
-                    <ThemeToggle />
                   </div>
                 </div>
               </header>
