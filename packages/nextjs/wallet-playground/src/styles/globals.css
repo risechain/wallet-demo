@@ -32,7 +32,7 @@
   --color-primary-foreground: var(--purple-contrast);
 
   --color-secondary: var(--gray-4);
-  --color-secondary-foreground: var(--gray-contrast);
+  --color-secondary-foreground: var(--gray-12);
 
   --color-border: var(--gray-6);
   --color-input: var(--gray-6);

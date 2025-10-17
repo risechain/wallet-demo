@@ -13,7 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@ui/sidebar";
-import { SessionKeyToggle } from "./SessionKeyToggle";
+import { SessionInfo } from "./SessionInfo";
 import { Separator } from "@ui/separator";
 import Image from "next/image";
 import { useTheme } from "next-themes";
@@ -72,8 +72,6 @@ export function AppSidebar() {
       </div>
 
       <SidebarContent>
-        <Separator />
-        <SessionKeyToggle />
         <Separator />
         <SidebarGroup>
           <SidebarGroupContent>

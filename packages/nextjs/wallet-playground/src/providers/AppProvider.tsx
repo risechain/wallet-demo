@@ -12,6 +12,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { WalletConnect } from "@/components/WalletConnect";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Separator } from "@ui/separator";
+import { SessionInfo } from "@/components/SessionInfo";
 
 export function AppProvider({
   children,
@@ -34,7 +35,10 @@ export function AppProvider({
               {/* Header */}
               <header className="bg-background border-b border-border sticky top-0 z-10">
                 <div className="flex justify-between items-center h-16 px-6">
-                  <SidebarTrigger />
+                  <div className="flex items-center gap-4">
+                    <SidebarTrigger />
+                    <SessionInfo />
+                  </div>
                   <div className="flex items-center gap-4">
                     <WalletConnect />
                     <Separator orientation="vertical" className="min-h-6" />

@@ -10,15 +10,17 @@ import {
 import { formatEther } from "viem";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "./ui/separator";
+import { Separator } from "@ui/separator";
+import { Skeleton } from "@ui/skeleton";
 
 export function WalletConnect() {
   const { address, isConnected } = useAccount();
   const { connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
-  const connectors = useConnectors();
   const { data: balance } = useBalance({ address });
+
   const [mounted, setMounted] = useState(false);
+  const connectors = useConnectors();
 
   // Fix hydration mismatch by only rendering after client mount
   useEffect(() => {
@@ -27,16 +29,12 @@ export function WalletConnect() {
 
   const portoConnector = connectors.find((c) => c.id === "xyz.ithaca.porto");
 
-  // Prevent hydration mismatch by showing loading state until mounted
   if (!mounted) {
-    return (
-      <button
-        disabled
-        className="px-6 py-2 bg-background text-gray-400 rounded-lg border border-gray-700 opacity-50 cursor-not-allowed"
-      >
-        Loading...
-      </button>
-    );
+    return <Skeleton className="w-40 h-8" />;
+  }
+
+  if (!portoConnector) {
+    return null;
   }
 
   if (isConnected && address) {
@@ -46,15 +44,13 @@ export function WalletConnect() {
           <p>
             {address.slice(0, 6)}...{address.slice(-4)}
           </p>
-          {balance && (
-            <>
-              <Separator orientation="vertical" className="min-h-4" />
-              <p className="text-muted-foreground">
-                {Number(formatEther(balance.value)).toFixed(4)}{" "}
-                <span className="font-bold">{balance.symbol}</span>
-              </p>
-            </>
-          )}
+
+          <Separator orientation="vertical" className="min-h-4" />
+
+          <p className="text-muted-foreground">
+            {balance ? Number(formatEther(balance.value)).toFixed(4) : "0.0000"}{" "}
+            <span className="font-bold">{balance?.symbol ?? "ETH"}</span>
+          </p>
         </div>
         <Separator orientation="vertical" className="min-h-6" />
         <Button onClick={() => disconnect()} variant="outline">
@@ -62,10 +58,6 @@ export function WalletConnect() {
         </Button>
       </div>
     );
-  }
-
-  if (!portoConnector) {
-    return null;
   }
 
   return (
