@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
-import { ArrowLeftRight, Coins, Key, Send } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { useSessionKeyPreference } from "@/context/SessionKeyContext";
+import { Separator } from "@ui/separator";
 import {
   Sidebar,
   SidebarContent,
@@ -14,12 +15,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@ui/sidebar";
-import { Separator } from "@ui/separator";
+import { ArrowLeftRight, Coins, Key, Send } from "lucide-react";
 import { useTheme } from "next-themes";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-
-import Image from "next/image";
 import { ThemeToggle } from "./ThemeToggle";
+import { Switch } from "./ui/switch";
 
 const demoItems = [
   {
@@ -47,6 +48,7 @@ const demoItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
+  const { preferSessionKey, setPreferSessionKey } = useSessionKeyPreference();
 
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -98,10 +100,19 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Preference</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="px-2">
+            <SidebarMenu className="px-2 gap-4">
               <SidebarMenuItem className="flex justify-between items-center">
                 <p>Theme</p>
                 <ThemeToggle />
+              </SidebarMenuItem>
+              <SidebarMenuItem className="flex justify-between items-center">
+                <p>Use Session Key</p>
+                <Switch
+                  className="w-12"
+                  thumbClassName="data-[state=unchecked]:-translate-x-1 data-[state=checked]:translate-x-4 h-8 w-8 border"
+                  checked={preferSessionKey}
+                  onCheckedChange={setPreferSessionKey}
+                />
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

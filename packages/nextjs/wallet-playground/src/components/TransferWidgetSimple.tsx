@@ -1,120 +1,136 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useAccount, useBalance } from 'wagmi'
-import { parseUnits, parseEther, isAddress, formatUnits, encodeFunctionData } from 'viem'
-import { TOKENS, MintableERC20ABI } from '@/config/tokens'
-import { useSessionKeys } from '@/hooks/useSessionKeys'
-import { useSessionKeyPreference } from '@/context/SessionKeyContext'
-import { executeTransaction, extractContractAddresses, TransactionCall } from '@/utils/sessionKeyTransactions'
-import { CopyableAddress } from './CopyableAddress'
+import { MintableERC20ABI, TOKENS } from "@/config/tokens";
+import { useSessionKeyPreference } from "@/context/SessionKeyContext";
+import { useSessionKeys } from "@/hooks/useSessionKeys";
+import {
+  executeTransaction,
+  extractContractAddresses,
+  TransactionCall,
+} from "@/utils/sessionKeyTransactions";
+import { useEffect, useState } from "react";
+import {
+  encodeFunctionData,
+  formatUnits,
+  isAddress,
+  parseEther,
+  parseUnits,
+} from "viem";
+import { useAccount, useBalance } from "wagmi";
+import { CopyableAddress } from "./CopyableAddress";
 
-type TokenSymbol = keyof typeof TOKENS
+type TokenSymbol = keyof typeof TOKENS;
 
 export function TransferWidgetSimple() {
-  const { address, isConnected, connector } = useAccount()
+  const { address, isConnected, connector } = useAccount();
 
-  const { hasSessionKey, executeWithSessionKey, getUsableSessionKey } = useSessionKeys()
-  const { preferSessionKey } = useSessionKeyPreference()
+  const { hasSessionKey, executeWithSessionKey, getUsableSessionKey } =
+    useSessionKeys();
+  const { preferSessionKey } = useSessionKeyPreference();
 
   // Get current key state - this will update when hasSessionKey changes
-  const keyExists = hasSessionKey()
-  const usableSessionKey = getUsableSessionKey()
+  const keyExists = hasSessionKey();
+  const usableSessionKey = getUsableSessionKey();
 
-  const [mounted, setMounted] = useState(false)
-  const [selectedToken, setSelectedToken] = useState<TokenSymbol | 'ETH'>('MockUSD')
-  const [recipient, setRecipient] = useState('')
-  const [amount, setAmount] = useState('')
-  const [error, setError] = useState('')
-  const [isSmartTransferring, setIsSmartTransferring] = useState(false)
+  const [mounted, setMounted] = useState(false);
+  const [selectedToken, setSelectedToken] = useState<TokenSymbol | "ETH">(
+    "MockUSD"
+  );
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [error, setError] = useState("");
+  const [isSmartTransferring, setIsSmartTransferring] = useState(false);
   const [smartTransferResult, setSmartTransferResult] = useState<{
-    hash?: string
-    success: boolean
-    usedSessionKey?: boolean
-    keyId?: string
-    error?: string
-  } | null>(null)
+    hash?: string;
+    success: boolean;
+    usedSessionKey?: boolean;
+    keyId?: string;
+    error?: string;
+  } | null>(null);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  const isETH = selectedToken === 'ETH'
-  const token = isETH ? null : TOKENS[selectedToken as TokenSymbol]
+  const isETH = selectedToken === "ETH";
+  const token = isETH ? null : TOKENS[selectedToken as TokenSymbol];
 
   // Get balance
   const { data: balance } = useBalance({
     address,
     token: token?.address,
-  })
-
+  });
 
   // Reset form after successful transfer
   useEffect(() => {
     if (smartTransferResult?.success) {
-      setRecipient('')
-      setAmount('')
-      setError('')
+      setRecipient("");
+      setAmount("");
+      setError("");
     }
-  }, [smartTransferResult?.success])
+  }, [smartTransferResult?.success]);
 
   // Smart transfer function that uses session keys when available
   const handleSmartTransfer = async () => {
-    setError('')
-    setSmartTransferResult(null)
+    setError("");
+    setSmartTransferResult(null);
 
     if (!isAddress(recipient)) {
-      setError('Invalid recipient address')
-      return
+      setError("Invalid recipient address");
+      return;
     }
 
     if (!amount || parseFloat(amount) <= 0) {
-      setError('Invalid amount')
-      return
+      setError("Invalid amount");
+      return;
     }
 
     if (!connector) {
-      setError('Wallet connector not available')
-      return
+      setError("Wallet connector not available");
+      return;
     }
 
-    setIsSmartTransferring(true)
+    setIsSmartTransferring(true);
 
     try {
-      let calls: TransactionCall[] = []
+      let calls: TransactionCall[] = [];
 
       if (isETH) {
-        const value = parseEther(amount)
+        const value = parseEther(amount);
         if (balance && value > balance.value) {
-          setError('Insufficient balance')
-          setIsSmartTransferring(false)
-          return
+          setError("Insufficient balance");
+          setIsSmartTransferring(false);
+          return;
         }
 
-        calls = [{
-          to: recipient,
-          value: value.toString(),
-          data: '0x'
-        }]
+        calls = [
+          {
+            to: recipient,
+            value: value.toString(),
+            data: "0x",
+          },
+        ];
       } else if (token) {
-        const parsedAmount = parseUnits(amount, token.decimals)
+        const parsedAmount = parseUnits(amount, token.decimals);
         if (balance && parsedAmount > balance.value) {
-          setError('Insufficient balance')
-          setIsSmartTransferring(false)
-          return
+          setError("Insufficient balance");
+          setIsSmartTransferring(false);
+          return;
         }
 
         const transferData = encodeFunctionData({
           abi: MintableERC20ABI,
-          functionName: 'transfer',
+          functionName: "transfer",
           args: [recipient as `0x${string}`, parsedAmount],
-        })
+        });
 
-        calls = [{
-          to: token.address,
-          data: transferData,
-          value: '0x0'
-        }]
+        calls = [
+          {
+            to: token.address,
+            data: transferData,
+            value: "0x0",
+          },
+        ];
       }
 
       const result = await executeTransaction(
@@ -122,52 +138,42 @@ export function TransferWidgetSimple() {
         {
           preferSessionKey,
           requiredPermissions: {
-            calls: extractContractAddresses(calls)
-          }
+            calls: extractContractAddresses(calls),
+          },
         },
         connector,
         executeWithSessionKey,
         keyExists,
         usableSessionKey
-      )
+      );
 
       if (result.success) {
-        setSmartTransferResult(result)
+        setSmartTransferResult(result);
       } else {
-        setError(result.error || 'Transfer failed')
+        setError(result.error || "Transfer failed");
       }
-
     } catch (err: any) {
-      console.error('Smart transfer error:', err)
-      setError(err.message || 'Transfer failed')
+      console.error("Smart transfer error:", err);
+      setError(err.message || "Transfer failed");
     } finally {
-      setIsSmartTransferring(false)
+      setIsSmartTransferring(false);
     }
-  }
-
+  };
 
   if (!mounted) {
     return (
       <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl text-center">
         <p className="text-gray-400">Loading...</p>
       </div>
-    )
+    );
   }
 
-  if (!isConnected) {
-    return (
-      <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl text-center">
-        <p className="text-gray-400">Please connect your wallet to use transfers</p>
-      </div>
-    )
-  }
-
-  const isTransferring = isSmartTransferring
-  const transferHash = smartTransferResult?.hash
-  const transferSuccess = smartTransferResult?.success
+  const isTransferring = isSmartTransferring;
+  const transferHash = smartTransferResult?.hash;
+  const transferSuccess = smartTransferResult?.success;
 
   // Check if we have an active session key (like playground)
-  const optimalKey = keyExists
+  const optimalKey = keyExists;
 
   return (
     <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
@@ -189,11 +195,14 @@ export function TransferWidgetSimple() {
         <div className="mb-4 p-3 bg-green-900/30 border border-green-600 rounded-lg">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm text-green-300">
-              {smartTransferResult?.usedSessionKey ? '🔑 Session key' : '🔐 Passkey'} transfer successful!
+              {smartTransferResult?.usedSessionKey
+                ? "🔑 Session key"
+                : "🔐 Passkey"}{" "}
+              transfer successful!
             </span>
             <div className="flex items-center gap-1">
               <CopyableAddress
-                address={transferHash || ''}
+                address={transferHash || ""}
                 prefix={8}
                 suffix={6}
                 className="text-green-400"
@@ -210,22 +219,35 @@ export function TransferWidgetSimple() {
             </div>
           </div>
           <div className="flex items-center mt-1">
-            <svg className="w-4 h-4 text-green-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="text-sm text-green-400">Transfer confirmed ✅</span>
-          </div>
-          {smartTransferResult?.usedSessionKey && smartTransferResult?.keyId && (
-            <div className="text-green-400 text-xs mt-1 flex items-center">
-              Used key:
-              <CopyableAddress
-                address={smartTransferResult.keyId}
-                prefix={6}
-                suffix={6}
-                className="text-green-400 ml-1"
+            <svg
+              className="w-4 h-4 text-green-400 mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
               />
-            </div>
-          )}
+            </svg>
+            <span className="text-sm text-green-400">
+              Transfer confirmed ✅
+            </span>
+          </div>
+          {smartTransferResult?.usedSessionKey &&
+            smartTransferResult?.keyId && (
+              <div className="text-green-400 text-xs mt-1 flex items-center">
+                Used key:
+                <CopyableAddress
+                  address={smartTransferResult.keyId}
+                  prefix={6}
+                  suffix={6}
+                  className="text-green-400 ml-1"
+                />
+              </div>
+            )}
         </div>
       )}
 
@@ -237,8 +259,8 @@ export function TransferWidgetSimple() {
         <select
           value={selectedToken}
           onChange={(e) => {
-            setSelectedToken(e.target.value as TokenSymbol | 'ETH')
-            setError('')
+            setSelectedToken(e.target.value as TokenSymbol | "ETH");
+            setError("");
           }}
           className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
@@ -255,10 +277,9 @@ export function TransferWidgetSimple() {
       <div className="mb-6 p-4 bg-gray-700 rounded-lg">
         <div className="text-sm text-gray-400 mb-1">Balance</div>
         <div className="text-2xl font-bold text-white">
-          {balance ?
-            `${parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)} ${selectedToken}` :
-            `0 ${selectedToken}`
-          }
+          {balance
+            ? `${parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)} ${selectedToken}`
+            : `0 ${selectedToken}`}
         </div>
       </div>
 
@@ -273,8 +294,8 @@ export function TransferWidgetSimple() {
             placeholder="0x..."
             value={recipient}
             onChange={(e) => {
-              setRecipient(e.target.value)
-              setError('')
+              setRecipient(e.target.value);
+              setError("");
             }}
             className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
@@ -289,8 +310,8 @@ export function TransferWidgetSimple() {
             placeholder="0.0"
             value={amount}
             onChange={(e) => {
-              setAmount(e.target.value)
-              setError('')
+              setAmount(e.target.value);
+              setError("");
             }}
             className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
@@ -312,7 +333,9 @@ export function TransferWidgetSimple() {
       {/* Transfer Button */}
       <button
         onClick={handleSmartTransfer}
-        disabled={isTransferring || !recipient || !amount || parseFloat(amount) <= 0}
+        disabled={
+          isTransferring || !recipient || !amount || parseFloat(amount) <= 0
+        }
         className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
       >
         {isTransferring ? (
@@ -322,11 +345,10 @@ export function TransferWidgetSimple() {
           </div>
         ) : (
           <>
-            {preferSessionKey && optimalKey ? '🔑' : '🔐'} Send {selectedToken}
+            {preferSessionKey && optimalKey ? "🔑" : "🔐"} Send {selectedToken}
           </>
         )}
       </button>
-
     </div>
-  )
+  );
 }

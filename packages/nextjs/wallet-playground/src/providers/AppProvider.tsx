@@ -1,18 +1,16 @@
 "use client";
 
-import { WalletProvider } from "./WalletProvider";
-import { SessionKeyProvider } from "@/context/SessionKeyContext";
-import { ThemeProvider } from "./ThemeProvider";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SessionInfo } from "@/components/SessionInfo";
 import {
-  SidebarProvider,
   SidebarInset,
+  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { WalletConnect } from "@/components/WalletConnect";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Separator } from "@ui/separator";
-import { SessionInfo } from "@/components/SessionInfo";
+import { SessionKeyProvider } from "@/context/SessionKeyContext";
+import { ThemeProvider } from "./ThemeProvider";
+import { WalletProvider } from "./WalletProvider";
 
 export function AppProvider({
   children,
@@ -25,7 +23,6 @@ export function AppProvider({
       storageKey="rise-wallet-demo-theme"
       attribute="class"
       enableSystem
-      // disableTransitionOnChange
     >
       <WalletProvider>
         <SessionKeyProvider>
@@ -46,8 +43,10 @@ export function AppProvider({
               </header>
 
               {/* Main Content */}
-              <main className="px-6 py-8">
-                <div className="max-w-md mx-auto">{children}</div>
+              <main className="p-6">
+                <div className="max-w-lg min-h-[80vh] h-full mx-auto">
+                  {children}
+                </div>
               </main>
             </SidebarInset>
           </SidebarProvider>

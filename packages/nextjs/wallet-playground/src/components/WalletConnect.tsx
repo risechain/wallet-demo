@@ -1,26 +1,19 @@
 "use client";
 
-import {
-  useConnect,
-  useAccount,
-  useDisconnect,
-  useConnectors,
-  useBalance,
-} from "wagmi";
-import { formatEther } from "viem";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@ui/separator";
 import { Skeleton } from "@ui/skeleton";
+import { useEffect, useState } from "react";
+import { formatEther } from "viem";
+import { useAccount, useBalance, useConnect, useDisconnect } from "wagmi";
 
 export function WalletConnect() {
   const { address, isConnected } = useAccount();
-  const { connect, isPending } = useConnect();
+  const { connect, isPending, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { data: balance } = useBalance({ address });
 
   const [mounted, setMounted] = useState(false);
-  const connectors = useConnectors();
 
   // Fix hydration mismatch by only rendering after client mount
   useEffect(() => {
