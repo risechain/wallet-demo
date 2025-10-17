@@ -11,7 +11,7 @@ export function ConnectInfo({ label }: Readonly<ConnectInfoProps>) {
   const portoConnector = connectors.find((c) => c.id === "xyz.ithaca.porto");
 
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-2">
+    <div className="text-center space-y-4">
       <p className="text-muted-foreground">
         Login your wallet to <span className="font-bold">{label}</span>!
       </p>

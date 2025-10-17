@@ -28,7 +28,14 @@ export function useSessionKeys() {
   const { address, isConnected, connector } = useAccount();
 
   // Use Porto's built-in hooks - much simpler!
-  const { data: permissions, isLoading: loading } = Hooks.usePermissions();
+  const {
+    data: permissions,
+    isLoading: loading,
+    error,
+  } = Hooks.usePermissions({
+    address,
+  });
+
   const grantPermissions = Hooks.useGrantPermissions();
   const revokePermissions = Hooks.useRevokePermissions();
 
@@ -49,6 +56,12 @@ export function useSessionKeys() {
     }
     return false;
   };
+
+  console.log("address:: ", address);
+  console.log("error:: ", error);
+  console.log("loading:: ", loading);
+  console.log("permissions:: ", permissions);
+  console.log("------------------");
 
   // Transform permissions to our SessionKey format
   const sessionKeys: SessionKey[] =

@@ -1,23 +1,33 @@
 "use client";
 
 import { ConnectInfo } from "@/components/ConnectInfo";
-import { MintButtonSimple } from "@/components/MintButtonSimple";
+import { Mint } from "@/components/Mint";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 
 export default function MintPage() {
   const { isConnected } = useAccount();
+  const [isMounted, setIsMounted] = useState(false);
 
-  if (!isConnected) {
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isConnected || !isMounted) {
     return <ConnectInfo label="Mint Token" />;
   }
 
   return (
-    <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl text-center">
-      <h3 className="text-lg font-semibold mb-6 text-white">Mint Tokens</h3>
-      <p className="text-gray-400 mb-6">
-        Mint MockUSD and MockToken for testing. Each address can mint once.
-      </p>
-      <MintButtonSimple />
-    </div>
+    <Card>
+      <CardHeader>Mint Test Tokens</CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-muted-foreground text-sm">
+          Mint MockUSD and MockToken for testing. Each address can mint{" "}
+          <span className="font-bold">1,000</span> per token.
+        </p>
+        <Mint />
+      </CardContent>
+    </Card>
   );
 }

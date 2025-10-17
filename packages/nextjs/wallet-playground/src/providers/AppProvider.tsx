@@ -44,7 +44,7 @@ export function AppProvider({
 
               {/* Main Content */}
               <main className="p-6">
-                <div className="max-w-lg min-h-[80vh] h-full mx-auto">
+                <div className="max-w-lg min-h-[80vh] h-full m-auto grid items-center">
                   {children}
                 </div>
               </main>

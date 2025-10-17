@@ -1,8 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { config } from "@/config/wagmi";
 import { Separator } from "@ui/separator";
 import { Skeleton } from "@ui/skeleton";
+import { Actions } from "porto/wagmi";
 import { useEffect, useState } from "react";
 import { formatEther } from "viem";
 import { useAccount, useBalance, useConnect, useDisconnect } from "wagmi";
@@ -19,6 +21,9 @@ export function WalletConnect() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  console.log("connectors:: ", connectors);
+  console.log("isPending:: ", isPending);
 
   const portoConnector = connectors.find((c) => c.id === "xyz.ithaca.porto");
 
@@ -46,7 +51,14 @@ export function WalletConnect() {
           </p>
         </div>
         <Separator orientation="vertical" className="min-h-6" />
-        <Button onClick={() => disconnect()} variant="outline">
+        <Button
+          onClick={() => {
+            Actions.disconnect(config);
+
+            disconnect();
+          }}
+          variant="outline"
+        >
           Disconnect
         </Button>
       </div>
