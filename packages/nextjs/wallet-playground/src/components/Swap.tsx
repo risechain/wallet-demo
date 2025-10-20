@@ -490,7 +490,7 @@ export function Swap() {
               <p className="text-sm font-semibold">To</p>
               <span className="text-sm text-muted-foreground">
                 Balance:{" "}
-                {fromBalance
+                {toBalance
                   ? Number.parseFloat(
                       formatUnits(toBalance?.value ?? 0n, toBalance.decimals)
                     ).toFixed(4)
