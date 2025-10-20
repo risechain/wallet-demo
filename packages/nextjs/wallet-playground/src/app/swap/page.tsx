@@ -1,7 +1,7 @@
 "use client";
 
 import { ConnectInfo } from "@/components/ConnectInfo";
-import { SwapWidget } from "@/components/SwapWidget";
+import { Swap } from "@/components/Swap";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 
@@ -17,5 +17,5 @@ export default function SwapPage() {
     return <ConnectInfo label="Swap" />;
   }
 
-  return <SwapWidget />;
+  return <Swap />;
 }

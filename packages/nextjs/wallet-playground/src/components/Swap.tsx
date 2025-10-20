@@ -9,14 +9,20 @@ import {
   executeTransaction,
   TransactionCall,
 } from "@/utils/sessionKeyTransactions";
+import { ArrowDownUp, Check, Key, Lock } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { encodeFunctionData, formatUnits, parseUnits } from "viem";
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { CopyableAddress } from "./CopyableAddress";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader } from "./ui/card";
+import { Input } from "./ui/input";
+import { Spinner } from "./ui/spinner";
 
 type TokenSymbol = keyof typeof TOKENS;
 
-export function SwapWidget() {
+export function Swap() {
   const { address, isConnected, connector } = useAccount();
 
   const [mounted, setMounted] = useState(false);
@@ -403,237 +409,214 @@ export function SwapWidget() {
   );
 
   return (
-    <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-white">Swap</h3>
-        {/* Session Key Status */}
-        <div className="text-xs text-gray-400">
-          {preferSessionKey && usableSessionKey ? (
-            <span className="text-green-400">🔑 Session key ready</span>
-          ) : preferSessionKey ? (
-            <span className="text-yellow-400">🔐 Will use passkey</span>
-          ) : (
-            <span className="text-gray-400">🔐 Passkey mode</span>
-          )}
+    <Card>
+      <CardHeader>
+        <div className="flex gap-2 justify-between items-center">
+          <p className="text-xl">Swap</p>
+          <p className="text-sm font-normal">
+            {preferSessionKey && usableSessionKey && (
+              <span className="text-success">Session key ready</span>
+            )}
+            {preferSessionKey && !usableSessionKey && (
+              <span className="text-destructive">
+                No session key available!
+              </span>
+            )}
+            {!preferSessionKey && !usableSessionKey && (
+              <span className="text-destructive">Session key deactivated!</span>
+            )}
+          </p>
         </div>
-      </div>
+      </CardHeader>
 
-      {/* Transaction Success Popup */}
-      {smartTxResult?.hash && (
-        <div className="mb-4 p-3 bg-green-900/30 border border-green-600 rounded-lg">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="text-sm text-green-300">
-              {smartTxResult?.usedSessionKey ? "🔑 Session key" : "🔐 Passkey"}{" "}
-              transaction successful!
-            </span>
-            <div className="flex items-center gap-1">
-              <CopyableAddress
-                address={smartTxResult?.hash || ""}
-                prefix={8}
-                suffix={6}
-                className="text-green-400"
-              />
-              <a
-                href={`https://explorer.testnet.riselabs.xyz/tx/${smartTxResult?.hash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-green-400 hover:text-green-300"
-                title="View on explorer"
-              >
-                ↗
-              </a>
-            </div>
-          </div>
-          {smartTxResult?.success && (
-            <div className="flex items-center mt-1">
-              <svg
-                className="w-4 h-4 text-green-400 mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span className="text-sm text-green-400">
-                Transaction confirmed ✅
+      <CardContent className="space-y-4">
+        {/* From Section */}
+        <div className="bg-secondary/50 p-6 rounded-lg">
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold">From</p>
+              <span className="text-sm text-muted-foreground">
+                Balance:{" "}
+                {fromBalance
+                  ? Number.parseFloat(
+                      formatUnits(fromBalance.value, fromBalance.decimals)
+                    ).toFixed(4)
+                  : "0"}
               </span>
             </div>
-          )}
-          {smartTxResult?.usedSessionKey && smartTxResult?.keyId && (
-            <div className="text-green-400 text-xs mt-1 flex items-center">
-              Used key:
-              <CopyableAddress
-                address={smartTxResult.keyId}
-                prefix={6}
-                suffix={6}
-                className="text-green-400 ml-1"
-              />
+            <div className="flex items-center gap-1">
+              <div className="flex flex-1 gap-2 items-center border rounded-lg pr-3 bg-background">
+                <Input
+                  type="number"
+                  id="from"
+                  placeholder="0"
+                  className="border-none"
+                  value={fromAmount}
+                  onChange={(e) => {
+                    setFromAmount(e.target.value);
+                    setError("");
+                    setSmartTxResult(null);
+                  }}
+                />
+                <p className="text-sm text-muted-foreground font-semibold">
+                  {fromTokenConfig.symbol}
+                </p>
+              </div>
+              <Button variant="outline" onClick={handleMaxClick}>
+                Max
+              </Button>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* From Section */}
-      <div className="mb-1">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-300">From</span>
-          <span className="text-sm text-gray-400">
-            Balance:{" "}
-            {fromBalance
-              ? parseFloat(
-                  formatUnits(fromBalance.value, fromBalance.decimals)
-                ).toFixed(4)
-              : "0"}
-          </span>
+          </div>
         </div>
 
-        <div className="relative bg-gray-700 border border-gray-600 rounded-xl p-4 hover:border-gray-500 transition-colors">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 mr-3">
-              <input
-                type="text"
-                placeholder="0"
-                value={fromAmount}
-                onChange={(e) => {
-                  setFromAmount(e.target.value);
-                  setError("");
-                  setSmartTxResult(null);
-                }}
-                className="w-full text-2xl font-semibold bg-transparent text-white placeholder-gray-400 border-none outline-none"
-              />
+        {/* Switch Button */}
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            onClick={handleTokenSwitch}
+            className="p-2 rounded-full border"
+          >
+            <ArrowDownUp />
+          </Button>
+        </div>
+
+        {/* To Section */}
+        <div className="bg-secondary/50 p-6 rounded-lg">
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold">To</p>
+              <span className="text-sm text-muted-foreground">
+                Balance:{" "}
+                {fromBalance
+                  ? Number.parseFloat(
+                      formatUnits(toBalance.value, toBalance.decimals)
+                    ).toFixed(4)
+                  : "0"}
+              </span>
             </div>
-
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handleMaxClick}
-                className="px-2 py-1 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                MAX
-              </button>
-
-              <div className="bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-sm font-medium text-white">
-                {fromTokenConfig.symbol}
+            <div className="flex items-center gap-1">
+              <div className="flex flex-1 gap-2 items-center border rounded-lg pr-3 bg-background">
+                <Input
+                  type="text"
+                  id="to"
+                  readOnly
+                  placeholder="0"
+                  className="border-none"
+                  value={quoteLoading ? "please wait..." : toAmount}
+                  onChange={(e) => {
+                    setFromAmount(e.target.value);
+                    setError("");
+                    setSmartTxResult(null);
+                  }}
+                />
+                <p className="text-sm text-muted-foreground font-semibold">
+                  {toTokenConfig.symbol}
+                </p>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Switch Button */}
-      <div className="flex justify-center my-4">
-        <button
-          onClick={handleTokenSwitch}
-          className="p-2 bg-gray-700 hover:bg-gray-600 rounded-full border border-gray-600 transition-colors"
-        >
-          <svg
-            className="w-4 h-4 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-            />
-          </svg>
-        </button>
-      </div>
-
-      {/* To Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-300">To</span>
-          <span className="text-sm text-gray-400">
-            Balance:{" "}
-            {toBalance
-              ? parseFloat(
-                  formatUnits(toBalance.value, toBalance.decimals)
-                ).toFixed(4)
-              : "0"}
-          </span>
-        </div>
-
-        <div className="relative bg-gray-700 border border-gray-600 rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 mr-3">
-              <div className="text-2xl font-semibold text-white">
-                {quoteLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full mr-2"></div>
-                    <span className="text-gray-400">Loading...</span>
+        {/* Action Button */}
+        <div className="space-y-3">
+          {needsApproval && !smartTxResult?.success ? (
+            <div className="space-y-3">
+              <div className="p-3 bg-yellow-900/30 border border-yellow-600 rounded-lg">
+                <p className="text-sm text-yellow-300">
+                  You need to approve {fromTokenConfig.symbol} spending first
+                </p>
+              </div>
+              <button
+                onClick={handleSmartApprove}
+                disabled={
+                  isExecuting || !fromAmount || parseFloat(fromAmount) <= 0
+                }
+                className="w-full py-4 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
+              >
+                {isExecuting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                    Approving...
                   </div>
                 ) : (
-                  <span>
-                    {toAmount || <span className="text-gray-400">0</span>}
-                  </span>
+                  `${preferSessionKey && usableSessionKey ? "🔑" : "🔐"} Approve ${fromTokenConfig.symbol}`
                 )}
-              </div>
+              </button>
             </div>
-
-            <div className="bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-sm font-medium text-white">
-              {toTokenConfig.symbol}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mb-4 p-3 bg-red-900/30 border border-red-600 rounded-lg">
-          <p className="text-sm text-red-300">{error}</p>
-        </div>
-      )}
-
-      {/* Action Button */}
-      <div className="space-y-3">
-        {needsApproval && !smartTxResult?.success ? (
-          <div className="space-y-3">
-            <div className="p-3 bg-yellow-900/30 border border-yellow-600 rounded-lg">
-              <p className="text-sm text-yellow-300">
-                You need to approve {fromTokenConfig.symbol} spending first
-              </p>
-            </div>
-            <button
-              onClick={handleSmartApprove}
-              disabled={
-                isExecuting || !fromAmount || parseFloat(fromAmount) <= 0
-              }
-              className="w-full py-4 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
+          ) : (
+            <Button
+              onClick={handleSmartSwap}
+              disabled={isExecuting || !canSwap}
+              className="w-full"
+              size="xl"
             >
-              {isExecuting ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                  Approving...
-                </div>
-              ) : (
-                `${preferSessionKey && usableSessionKey ? "🔑" : "🔐"} Approve ${fromTokenConfig.symbol}`
-              )}
-            </button>
+              {isExecuting ? <Spinner className="stroke-invert" /> : "Swap"}
+            </Button>
+          )}
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="p-4 bg-destructive/5 rounded-md">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
-        ) : (
-          <button
-            onClick={handleSmartSwap}
-            disabled={isExecuting || !canSwap}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
-          >
-            {isExecuting ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                Swapping...
-              </div>
-            ) : (
-              `${preferSessionKey && usableSessionKey ? "🔑" : "🔐"} Swap`
-            )}
-          </button>
         )}
-      </div>
-    </div>
+
+        {/* Transaction Success Popup */}
+        {smartTxResult?.hash && (
+          <div className="p-3 bg-success/5 rounded-md">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="flex items-center gap-2 text-sm text-success">
+                {smartTxResult?.usedSessionKey ? (
+                  <>
+                    <Key size={16} />
+                    Successful Transaction using Session Key!
+                  </>
+                ) : (
+                  <>
+                    <Lock size={16} />
+                    Successful Transaction using PassKey!
+                  </>
+                )}
+              </p>
+              <div className="flex items-center gap-1">
+                <Link
+                  href={`https://explorer.testnet.riselabs.xyz/tx/${smartTxResult?.hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="View on explorer"
+                >
+                  <CopyableAddress
+                    address={smartTxResult?.hash || ""}
+                    prefix={8}
+                    suffix={6}
+                    className="underline"
+                  />
+                </Link>
+              </div>
+            </div>
+            {smartTxResult?.success && (
+              <div className="flex items-center gap-2">
+                <Check size={16} />
+                <span className="text-sm text-success">
+                  Transaction confirmed
+                </span>
+              </div>
+            )}
+            {smartTxResult?.usedSessionKey && smartTxResult?.keyId && (
+              <div className="text-success text-xs mt-1 flex items-center">
+                Used key:
+                <CopyableAddress
+                  address={smartTxResult.keyId}
+                  prefix={6}
+                  suffix={6}
+                  className="text-success ml-1"
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
