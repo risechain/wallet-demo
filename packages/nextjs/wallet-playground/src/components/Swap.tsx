@@ -439,7 +439,10 @@ export function Swap() {
                 Balance:{" "}
                 {fromBalance
                   ? Number.parseFloat(
-                      formatUnits(fromBalance.value, fromBalance.decimals)
+                      formatUnits(
+                        fromBalance?.value ?? 0n,
+                        fromBalance.decimals
+                      )
                     ).toFixed(4)
                   : "0"}
               </span>
@@ -489,7 +492,7 @@ export function Swap() {
                 Balance:{" "}
                 {fromBalance
                   ? Number.parseFloat(
-                      formatUnits(toBalance.value, toBalance.decimals)
+                      formatUnits(toBalance?.value ?? 0n, toBalance.decimals)
                     ).toFixed(4)
                   : "0"}
               </span>
@@ -521,12 +524,12 @@ export function Swap() {
         <div className="space-y-3">
           {needsApproval && !smartTxResult?.success ? (
             <div className="space-y-3">
-              <div className="p-3 bg-yellow-900/30 border border-yellow-600 rounded-lg">
+              <div className="p-3 bg-yellow-600/5 rounded-lg">
                 <p className="text-sm text-yellow-300">
                   You need to approve {fromTokenConfig.symbol} spending first
                 </p>
               </div>
-              <button
+              <Button
                 onClick={handleSmartApprove}
                 disabled={
                   isExecuting || !fromAmount || parseFloat(fromAmount) <= 0
@@ -541,7 +544,7 @@ export function Swap() {
                 ) : (
                   `${preferSessionKey && usableSessionKey ? "🔑" : "🔐"} Approve ${fromTokenConfig.symbol}`
                 )}
-              </button>
+              </Button>
             </div>
           ) : (
             <Button
