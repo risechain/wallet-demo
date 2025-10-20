@@ -521,31 +521,22 @@ export function Swap() {
         </div>
 
         {/* Action Button */}
-        <div className="space-y-3">
+        <div>
           {needsApproval && !smartTxResult?.success ? (
-            <div className="space-y-3">
-              <div className="p-3 bg-yellow-600/5 rounded-lg">
-                <p className="text-sm text-yellow-300">
-                  You need to approve {fromTokenConfig.symbol} spending first
-                </p>
-              </div>
-              <Button
-                onClick={handleSmartApprove}
-                disabled={
-                  isExecuting || !fromAmount || parseFloat(fromAmount) <= 0
-                }
-                className="w-full py-4 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
-              >
-                {isExecuting ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                    Approving...
-                  </div>
-                ) : (
-                  `${preferSessionKey && usableSessionKey ? "🔑" : "🔐"} Approve ${fromTokenConfig.symbol}`
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={handleSmartApprove}
+              disabled={
+                isExecuting || !fromAmount || Number.parseFloat(fromAmount) <= 0
+              }
+              className="w-full"
+              size="xl"
+            >
+              {isExecuting ? (
+                <Spinner className="stroke-invert" />
+              ) : (
+                `Approve ${fromTokenConfig.symbol}`
+              )}
+            </Button>
           ) : (
             <Button
               onClick={handleSmartSwap}
@@ -557,6 +548,15 @@ export function Swap() {
             </Button>
           )}
         </div>
+
+        {/* Approval Warning */}
+        {needsApproval && !smartTxResult?.success && !error && (
+          <div className="p-3 bg-warning/5 rounded-lg">
+            <p className="text-sm text-warning">
+              You need to approve {fromTokenConfig.symbol} spending first
+            </p>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (

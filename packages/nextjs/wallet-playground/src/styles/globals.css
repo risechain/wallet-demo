@@ -43,6 +43,9 @@
   --color-destructive: #d4183d;
   --color-destructive-foreground: var(--gray-1);
 
+  --color-warning: #ffaa00;
+  --color-warning-foreground: var(--gray-1);
+
   --color-success: #009933;
   --color-success-foreground: var(--gray-1);
 
