@@ -52,7 +52,7 @@
   --color-muted: var(--gray-6);
   --color-muted-foreground: var(--gray-9);
 
-  --color-popover: var(--purple-2);
+  --color-popover: var(--gray-1);
   --color-popover-foreground: var(--gray-surface);
 
   --color-ring: var(--ring);

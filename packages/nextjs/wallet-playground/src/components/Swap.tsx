@@ -401,8 +401,8 @@ export function Swap() {
       !isTransacting &&
       !quoteLoading &&
       !allowanceLoading &&
-      parseFloat(fromAmount) > 0 &&
-      parseFloat(toAmount) > 0 &&
+      Number.parseFloat(fromAmount) > 0 &&
+      Number.parseFloat(toAmount) > 0 &&
       !error &&
       address &&
       allowance !== undefined
@@ -431,7 +431,7 @@ export function Swap() {
 
       <CardContent className="space-y-4">
         {/* From Section */}
-        <div className="bg-secondary/50 p-6 rounded-lg">
+        <div className="bg-secondary/50 p-4 rounded-lg">
           <div className="grid gap-2">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">From</p>
@@ -484,7 +484,7 @@ export function Swap() {
         </div>
 
         {/* To Section */}
-        <div className="bg-secondary/50 p-6 rounded-lg">
+        <div className="bg-secondary/50 p-4 rounded-lg">
           <div className="grid gap-2">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">To</p>
@@ -497,25 +497,23 @@ export function Swap() {
                   : "0"}
               </span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="flex flex-1 gap-2 items-center border rounded-lg pr-3 bg-background">
-                <Input
-                  type="text"
-                  id="to"
-                  readOnly
-                  placeholder="0"
-                  className="border-none"
-                  value={quoteLoading ? "please wait..." : toAmount}
-                  onChange={(e) => {
-                    setFromAmount(e.target.value);
-                    setError("");
-                    setSmartTxResult(null);
-                  }}
-                />
-                <p className="text-sm text-muted-foreground font-semibold">
-                  {toTokenConfig.symbol}
-                </p>
-              </div>
+            <div className="flex items-center gap-1 border rounded-lg pr-3 bg-background">
+              <Input
+                type="text"
+                id="to"
+                readOnly
+                placeholder="0"
+                className="border-none"
+                value={quoteLoading ? "please wait..." : toAmount}
+                onChange={(e) => {
+                  setFromAmount(e.target.value);
+                  setError("");
+                  setSmartTxResult(null);
+                }}
+              />
+              <p className="text-sm text-muted-foreground font-semibold">
+                {toTokenConfig.symbol}
+              </p>
             </div>
           </div>
         </div>
@@ -541,7 +539,7 @@ export function Swap() {
             <Button
               onClick={handleSmartSwap}
               disabled={isExecuting || !canSwap}
-              className="w-full"
+              className="w-full text-lg"
               size="xl"
             >
               {isExecuting ? <Spinner className="stroke-invert" /> : "Swap"}
@@ -565,7 +563,7 @@ export function Swap() {
           </div>
         )}
 
-        {/* Transaction Success Popup */}
+        {/* Transaction Success Message */}
         {smartTxResult?.hash && (
           <div className="p-3 bg-success/5 rounded-md">
             <div className="flex items-center justify-between flex-wrap gap-2">

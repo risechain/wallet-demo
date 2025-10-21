@@ -7,4 +7,4 @@ export type MintProps = {
   };
 };
 
-export function useMint() {}
+export function useMint(props: MintProps) {}

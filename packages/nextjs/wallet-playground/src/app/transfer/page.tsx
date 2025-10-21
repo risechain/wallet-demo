@@ -1,7 +1,7 @@
 "use client";
 
 import { ConnectInfo } from "@/components/ConnectInfo";
-import { TransferWidgetSimple } from "@/components/TransferWidgetSimple";
+import { Transfer } from "@/components/Transfer";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 
@@ -17,5 +17,5 @@ export default function TransferPage() {
     return <ConnectInfo label="Transfer" />;
   }
 
-  return <TransferWidgetSimple />;
+  return <Transfer />;
 }
