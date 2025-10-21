@@ -9,8 +9,7 @@ import {
   extractContractAddresses,
   TransactionCall,
 } from "@/utils/sessionKeyTransactions";
-import { Check, ChevronDown, Key, Lock } from "lucide-react";
-import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   encodeFunctionData,
@@ -20,7 +19,8 @@ import {
   parseUnits,
 } from "viem";
 import { useAccount, useBalance } from "wagmi";
-import { CopyableAddress } from "./CopyableAddress";
+import { TransactionHeader } from "./TransactionHeader";
+import { TransactionResult } from "./TransactionResult";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import {
@@ -187,22 +187,7 @@ export function Transfer() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex gap-2 justify-between items-center">
-          <p className="text-xl">Transfer</p>
-          <p className="text-sm font-normal">
-            {preferSessionKey && usableSessionKey && (
-              <span className="text-success">Session key ready</span>
-            )}
-            {preferSessionKey && !usableSessionKey && (
-              <span className="text-destructive">
-                No session key available!
-              </span>
-            )}
-            {!preferSessionKey && !usableSessionKey && (
-              <span className="text-destructive">Session key deactivated!</span>
-            )}
-          </p>
-        </div>
+        <TransactionHeader label="Transfer" />
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -287,72 +272,13 @@ export function Transfer() {
           {isTransferring ? <Spinner className="stroke-invert" /> : "Transfer"}
         </Button>
 
-        {/* Transaction Success Message */}
-        {transferHash && transferSuccess && (
-          <div className="p-3 bg-success/5 rounded-md">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="flex items-center gap-2 text-sm text-success">
-                {transferResult?.usedSessionKey ? (
-                  <>
-                    <Key size={16} />
-                    Successful Transaction using Session Key!
-                  </>
-                ) : (
-                  <>
-                    <Lock size={16} />
-                    Successful Transaction using PassKey!
-                  </>
-                )}
-              </p>
-              <div className="flex items-center gap-1">
-                <Link
-                  href={`https://explorer.testnet.riselabs.xyz/tx/${transferHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="View on explorer"
-                >
-                  <CopyableAddress
-                    address={transferHash || ""}
-                    prefix={8}
-                    suffix={6}
-                    className="underline"
-                  />
-                </Link>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Check size={16} />
-              <span className="text-sm text-success">
-                Transaction confirmed
-              </span>
-            </div>
-
-            {transferResult?.usedSessionKey && transferResult?.keyId && (
-              <div className="text-green-400 text-xs mt-1 flex items-center">
-                Used key:
-                <CopyableAddress
-                  address={transferResult.keyId}
-                  prefix={6}
-                  suffix={6}
-                  className="text-success ml-1"
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {error && (
-          <div className="p-4 bg-destructive/5 rounded-md">
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
-
-        {transferResult?.error && (
-          <div className="p-3 bg-red-900/30 border border-red-600 rounded-lg text-red-300 text-sm">
-            Transfer failed: {transferResult.error}
-          </div>
-        )}
+        <TransactionResult
+          isSuccess={transferHash && transferSuccess}
+          isSessionKey={transferResult?.usedSessionKey}
+          transactionHash={transferHash}
+          transactionAddr={transferResult?.keyId}
+          errorMessage={error}
+        />
       </CardContent>
     </Card>
   );

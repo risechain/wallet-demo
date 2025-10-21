@@ -9,12 +9,12 @@ import {
   executeTransaction,
   TransactionCall,
 } from "@/utils/sessionKeyTransactions";
-import { ArrowDownUp, Check, Key, Lock } from "lucide-react";
-import Link from "next/link";
+import { ArrowDownUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { encodeFunctionData, formatUnits, parseUnits } from "viem";
 import { useAccount, useBalance, useReadContract } from "wagmi";
-import { CopyableAddress } from "./CopyableAddress";
+import { TransactionHeader } from "./TransactionHeader";
+import { TransactionResult } from "./TransactionResult";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Input } from "./ui/input";
@@ -32,7 +32,7 @@ export function Swap() {
   const [toAmount, setToAmount] = useState("");
   const [error, setError] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [smartTxResult, setSmartTxResult] = useState<{
+  const [transactionResult, setTransactionResult] = useState<{
     hash: string;
     success: boolean;
     usedSessionKey?: boolean;
@@ -183,11 +183,11 @@ export function Swap() {
   })();
 
   // Smart approve function using the new executeTransaction
-  const handleSmartApprove = async () => {
+  const handleApprove = async () => {
     if (!fromAmount || parseFloat(fromAmount) <= 0) return;
 
     setError("");
-    setSmartTxResult(null);
+    setTransactionResult(null);
     setIsExecuting(true);
 
     if (!connector) {
@@ -228,7 +228,7 @@ export function Swap() {
       );
 
       if (result.success) {
-        setSmartTxResult(result);
+        setTransactionResult(result);
         // Refetch allowance after a delay
         setTimeout(() => {
           refetchAllowance();
@@ -246,7 +246,7 @@ export function Swap() {
   };
 
   // Smart swap function using the new executeTransaction
-  const handleSmartSwap = async () => {
+  const handleSwap = async () => {
     if (!fromAmount || !toAmount) return;
 
     setError("");
@@ -321,7 +321,7 @@ export function Swap() {
       );
 
       if (result.success) {
-        setSmartTxResult(result);
+        setTransactionResult(result);
         setFromAmount("");
         setToAmount("");
         setError("");
@@ -347,7 +347,7 @@ export function Swap() {
     setFromAmount("");
     setToAmount("");
     setError("");
-    setSmartTxResult(null);
+    setTransactionResult(null);
   };
 
   const handleMaxClick = () => {
@@ -393,12 +393,10 @@ export function Swap() {
     );
   }
 
-  const isTransacting = false; // No longer using wagmi transactions
   const canSwap = Boolean(
     fromAmount &&
       toAmount &&
       !needsApproval &&
-      !isTransacting &&
       !quoteLoading &&
       !allowanceLoading &&
       Number.parseFloat(fromAmount) > 0 &&
@@ -411,22 +409,7 @@ export function Swap() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex gap-2 justify-between items-center">
-          <p className="text-xl">Swap</p>
-          <p className="text-sm font-normal">
-            {preferSessionKey && usableSessionKey && (
-              <span className="text-success">Session key ready</span>
-            )}
-            {preferSessionKey && !usableSessionKey && (
-              <span className="text-destructive">
-                No session key available!
-              </span>
-            )}
-            {!preferSessionKey && !usableSessionKey && (
-              <span className="text-destructive">Session key deactivated!</span>
-            )}
-          </p>
-        </div>
+        <TransactionHeader label="Swap" />
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -458,7 +441,7 @@ export function Swap() {
                   onChange={(e) => {
                     setFromAmount(e.target.value);
                     setError("");
-                    setSmartTxResult(null);
+                    setTransactionResult(null);
                   }}
                 />
                 <p className="text-sm text-muted-foreground font-semibold">
@@ -508,7 +491,7 @@ export function Swap() {
                 onChange={(e) => {
                   setFromAmount(e.target.value);
                   setError("");
-                  setSmartTxResult(null);
+                  setTransactionResult(null);
                 }}
               />
               <p className="text-sm text-muted-foreground font-semibold">
@@ -520,9 +503,9 @@ export function Swap() {
 
         {/* Action Button */}
         <div>
-          {needsApproval && !smartTxResult?.success ? (
+          {needsApproval && !transactionResult?.success ? (
             <Button
-              onClick={handleSmartApprove}
+              onClick={handleApprove}
               disabled={
                 isExecuting || !fromAmount || Number.parseFloat(fromAmount) <= 0
               }
@@ -537,7 +520,7 @@ export function Swap() {
             </Button>
           ) : (
             <Button
-              onClick={handleSmartSwap}
+              onClick={handleSwap}
               disabled={isExecuting || !canSwap}
               className="w-full text-lg"
               size="xl"
@@ -547,76 +530,14 @@ export function Swap() {
           )}
         </div>
 
-        {/* Approval Warning */}
-        {needsApproval && !smartTxResult?.success && !error && (
-          <div className="p-3 bg-warning/5 rounded-lg">
-            <p className="text-sm text-warning">
-              You need to approve {fromTokenConfig.symbol} spending first
-            </p>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="p-4 bg-destructive/5 rounded-md">
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
-
-        {/* Transaction Success Message */}
-        {smartTxResult?.hash && (
-          <div className="p-3 bg-success/5 rounded-md">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="flex items-center gap-2 text-sm text-success">
-                {smartTxResult?.usedSessionKey ? (
-                  <>
-                    <Key size={16} />
-                    Successful Transaction using Session Key!
-                  </>
-                ) : (
-                  <>
-                    <Lock size={16} />
-                    Successful Transaction using PassKey!
-                  </>
-                )}
-              </p>
-              <div className="flex items-center gap-1">
-                <Link
-                  href={`https://explorer.testnet.riselabs.xyz/tx/${smartTxResult?.hash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="View on explorer"
-                >
-                  <CopyableAddress
-                    address={smartTxResult?.hash || ""}
-                    prefix={8}
-                    suffix={6}
-                    className="underline"
-                  />
-                </Link>
-              </div>
-            </div>
-            {smartTxResult?.success && (
-              <div className="flex items-center gap-2">
-                <Check size={16} />
-                <span className="text-sm text-success">
-                  Transaction confirmed
-                </span>
-              </div>
-            )}
-            {smartTxResult?.usedSessionKey && smartTxResult?.keyId && (
-              <div className="text-success text-xs mt-1 flex items-center">
-                Used key:
-                <CopyableAddress
-                  address={smartTxResult.keyId}
-                  prefix={6}
-                  suffix={6}
-                  className="text-success ml-1"
-                />
-              </div>
-            )}
-          </div>
-        )}
+        <TransactionResult
+          isSuccess={!!transactionResult?.hash}
+          isSessionKey={transactionResult?.usedSessionKey}
+          transactionHash={transactionResult?.hash}
+          transactionAddr={transactionResult?.hash}
+          errorMessage={error}
+          isWarning={needsApproval && !transactionResult?.success && !error}
+        />
       </CardContent>
     </Card>
   );
