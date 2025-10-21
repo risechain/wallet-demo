@@ -22,9 +22,6 @@ export function WalletConnect() {
     setMounted(true);
   }, []);
 
-  console.log("connectors:: ", connectors);
-  console.log("isPending:: ", isPending);
-
   const portoConnector = connectors.find((c) => c.id === "xyz.ithaca.porto");
 
   if (!mounted) {

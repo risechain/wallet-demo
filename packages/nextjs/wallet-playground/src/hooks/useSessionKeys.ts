@@ -3,7 +3,7 @@
 import { TOKENS, UNISWAP_CONTRACTS } from "@/config/tokens";
 import { Hex, P256, PublicKey, Signature, Value } from "ox";
 import { Hooks } from "porto/wagmi";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount } from "wagmi";
 
 export interface SessionKey {
@@ -51,8 +51,8 @@ export function useSessionKeys() {
     return false;
   };
 
-  console.log("permissions:: ", permissions);
-  console.log("------------------");
+  // console.log("permissions:: ", permissions);
+  // console.log("------------------");
 
   // Transform permissions to our SessionKey format
   const sessionKeys: SessionKey[] =
@@ -261,6 +261,7 @@ export function useSessionKeys() {
     [connector]
   );
 
+  // TODO: deprecate this
   // Check if we have a USABLE session key (both local private key AND active permission)
   const hasSessionKey = useCallback(() => {
     if (!keyPair) return false;
@@ -275,8 +276,38 @@ export function useSessionKeys() {
     );
   }, [sessionKeys, loading]);
 
+  // TODO: deprecate this
   // Get the active session key that can be used for transactions
   const getUsableSessionKey = useCallback(() => {
+    if (!keyPair) return null;
+    if (loading) return null;
+
+    return (
+      sessionKeys.find(
+        (key) =>
+          key.publicKey === keyPair.publicKey &&
+          key.hasPrivateKey === true &&
+          key.expiry > Math.floor(Date.now() / 1000)
+      ) || null
+    );
+  }, [sessionKeys, loading]);
+
+  const hasUsableSessionKey = useMemo(() => {
+    // Check if we have a USABLE session key (both local private key AND active permission)
+    if (!keyPair) return false;
+    if (loading) return false;
+
+    // Must have an active permission that matches our local key
+    return sessionKeys.some(
+      (key) =>
+        key.publicKey === keyPair.publicKey &&
+        key.hasPrivateKey === true &&
+        key.expiry > Math.floor(Date.now() / 1000)
+    );
+  }, [sessionKeys, loading]);
+
+  const activeSessionKeys = useMemo(() => {
+    // Get the active session key that can be used for transactions
     if (!keyPair) return null;
     if (loading) return null;
 
@@ -348,6 +379,8 @@ export function useSessionKeys() {
     executeWithSessionKey,
     hasSessionKey,
     getUsableSessionKey,
+    activeSessionKeys,
+    hasUsableSessionKey,
     revokeSessionKey,
     isCreating,
     loading,

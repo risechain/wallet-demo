@@ -5,8 +5,9 @@ import { CopyableAddress } from "./CopyableAddress";
 export type ResultProps = {
   isSuccess: boolean;
   isSessionKey: boolean;
-  transactionHash: string;
-  transactionAddr: string;
+  transactionHash?: string;
+  transactionAddr?: string;
+  keyId?: string;
   errorMessage?: string;
   isError?: boolean;
   isWarning?: boolean;
@@ -22,6 +23,7 @@ export function TransactionResult(props: Readonly<ResultProps>) {
     errorMessage,
     isWarning,
     warningMessage,
+    keyId,
   } = props;
 
   return (
@@ -49,21 +51,23 @@ export function TransactionResult(props: Readonly<ResultProps>) {
                 </>
               )}
             </p>
-            <div className="flex items-center gap-1">
-              <Link
-                href={`https://explorer.testnet.riselabs.xyz/tx/${transactionHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="View on explorer"
-              >
-                <CopyableAddress
-                  address={transactionHash || ""}
-                  prefix={8}
-                  suffix={6}
-                  className="underline"
-                />
-              </Link>
-            </div>
+            {transactionHash && (
+              <div className="flex items-center gap-1">
+                <Link
+                  href={`https://explorer.testnet.riselabs.xyz/tx/${transactionHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="View on explorer"
+                >
+                  <CopyableAddress
+                    address={transactionHash || ""}
+                    prefix={8}
+                    suffix={6}
+                    className="underline"
+                  />
+                </Link>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -75,7 +79,7 @@ export function TransactionResult(props: Readonly<ResultProps>) {
             <div className="text-green-400 text-xs mt-1 flex items-center">
               Used key:
               <CopyableAddress
-                address={transactionAddr}
+                address={keyId}
                 prefix={6}
                 suffix={6}
                 className="text-success ml-1"

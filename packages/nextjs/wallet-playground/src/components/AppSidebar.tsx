@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { useSessionKeyPreference } from "@/context/SessionKeyContext";
+import { useUserPreference } from "@/context/UserPreference";
 import { Separator } from "@ui/separator";
 import {
   Sidebar,
@@ -48,7 +48,7 @@ const demoItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
-  const { preferSessionKey, setPreferSessionKey } = useSessionKeyPreference();
+  const { isSessionKeyEnabled, enableSessionKey } = useUserPreference();
 
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -110,8 +110,8 @@ export function AppSidebar() {
                 <Switch
                   className="w-12"
                   thumbClassName="data-[state=unchecked]:-translate-x-1 data-[state=checked]:translate-x-4 h-8 w-8 border"
-                  checked={preferSessionKey}
-                  onCheckedChange={setPreferSessionKey}
+                  checked={isSessionKeyEnabled}
+                  onCheckedChange={enableSessionKey}
                 />
               </SidebarMenuItem>
             </SidebarMenu>

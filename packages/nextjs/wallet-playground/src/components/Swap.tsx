@@ -3,7 +3,7 @@
 import { MintableERC20ABI } from "@/abi/erc20";
 import { UniswapV2RouterABI } from "@/abi/swap";
 import { TOKENS, UNISWAP_CONTRACTS } from "@/config/tokens";
-import { useSessionKeyPreference } from "@/context/SessionKeyContext";
+import { useUserPreference } from "@/context/UserPreference";
 import { useSessionKeys } from "@/hooks/useSessionKeys";
 import {
   executeTransaction,
@@ -42,7 +42,7 @@ export function Swap() {
   // Session key hooks
   const { hasSessionKey, executeWithSessionKey, getUsableSessionKey } =
     useSessionKeys();
-  const { preferSessionKey } = useSessionKeyPreference();
+  const { isSessionKeyEnabled } = useUserPreference();
 
   // Get current key state - this will update when hasSessionKey changes
   const keyExists = hasSessionKey();
@@ -216,7 +216,7 @@ export function Swap() {
       const result = await executeTransaction(
         calls,
         {
-          preferSessionKey,
+          preferSessionKey: isSessionKeyEnabled,
           requiredPermissions: {
             calls: [fromTokenConfig.address.toLowerCase()],
           },
@@ -309,7 +309,7 @@ export function Swap() {
       const result = await executeTransaction(
         calls,
         {
-          preferSessionKey,
+          preferSessionKey: isSessionKeyEnabled,
           requiredPermissions: {
             calls: [UNISWAP_CONTRACTS.router.toLowerCase()],
           },

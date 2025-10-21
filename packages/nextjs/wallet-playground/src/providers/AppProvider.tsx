@@ -8,7 +8,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { WalletConnect } from "@/components/WalletConnect";
-import { SessionKeyProvider } from "@/context/SessionKeyContext";
+import { SessionKeyProvider } from "@/context/UserPreference";
 import { ThemeProvider } from "./ThemeProvider";
 import { WalletProvider } from "./WalletProvider";
 

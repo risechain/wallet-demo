@@ -1,4 +1,4 @@
-import { useSessionKeyPreference } from "@/context/SessionKeyContext";
+import { useUserPreference } from "@/context/UserPreference";
 import { useSessionKeys } from "@/hooks/useSessionKeys";
 
 export type HeaderProps = {
@@ -8,7 +8,7 @@ export type HeaderProps = {
 export function TransactionHeader(props: Readonly<HeaderProps>) {
   const { label } = props;
 
-  const { preferSessionKey } = useSessionKeyPreference();
+  const { isSessionKeyEnabled } = useUserPreference();
   const { getUsableSessionKey } = useSessionKeys();
 
   const usableSessionKey = getUsableSessionKey();
@@ -17,13 +17,13 @@ export function TransactionHeader(props: Readonly<HeaderProps>) {
     <div className="flex gap-2 justify-between items-center">
       <p className="text-xl">{label}</p>
       <p className="text-sm font-normal">
-        {preferSessionKey && usableSessionKey && (
-          <span className="text-success">Session key ready</span>
+        {isSessionKeyEnabled && usableSessionKey && (
+          <span className="text-success">Session key ready!</span>
         )}
-        {preferSessionKey && !usableSessionKey && (
+        {isSessionKeyEnabled && !usableSessionKey && (
           <span className="text-destructive">No session key available!</span>
         )}
-        {!preferSessionKey && !usableSessionKey && (
+        {!isSessionKeyEnabled && (
           <span className="text-destructive">Session key deactivated!</span>
         )}
       </p>
