@@ -2,6 +2,7 @@
 
 import { ConnectInfo } from "@/components/ConnectInfo";
 import { Mint } from "@/components/Mint";
+import { TransactionHeader } from "@/components/TransactionHeader";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
@@ -20,7 +21,9 @@ export default function MintPage() {
 
   return (
     <Card>
-      <CardHeader>Mint Test Tokens</CardHeader>
+      <CardHeader>
+        <TransactionHeader label="Mint Test Tokens" />
+      </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
           Mint MockUSD and MockToken for testing. Each address can mint{" "}

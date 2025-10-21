@@ -12,9 +12,8 @@ import {
 import { useCallback, useState } from "react";
 import { encodeFunctionData } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
-import { CopyableAddress } from "./CopyableAddress";
+import { TransactionResult } from "./TransactionResult";
 import { Button } from "./ui/button";
-import { Card, CardContent } from "./ui/card";
 import { Separator } from "./ui/separator";
 
 export function Mint() {
@@ -28,13 +27,9 @@ export function Mint() {
   const keyExists = hasSessionKey();
   const usableSessionKey = getUsableSessionKey();
 
-  const [currentToken, setCurrentToken] = useState<
-    "MockUSD" | "MockToken" | null
-  >(null);
+  const [isMinting, setIsMinting] = useState(false);
 
-  const [isSmartMinting, setIsSmartMinting] = useState(false);
-
-  const [smartMintResult, setSmartMintResult] = useState<{
+  const [transactionResult, setTransactionResult] = useState<{
     hash: string;
     success: boolean;
     usedSessionKey?: boolean;
@@ -69,17 +64,16 @@ export function Mint() {
   );
 
   // Smart mint function that uses session keys when available
-  const onMint = async (tokenSymbol: "MockUSD" | "MockToken") => {
+  const handleMint = async (tokenSymbol: "MockUSD" | "MockToken") => {
     const token = TOKENS[tokenSymbol];
-    setCurrentToken(tokenSymbol);
-    setSmartMintResult(null);
+    setTransactionResult(null);
 
     if (!connector) {
       console.error("No connector available for minting");
       return;
     }
 
-    setIsSmartMinting(true);
+    setIsMinting(true);
 
     try {
       const mintData = encodeFunctionData({
@@ -111,7 +105,7 @@ export function Mint() {
       );
 
       if (result.success) {
-        setSmartMintResult(result);
+        setTransactionResult(result);
       } else {
         console.error("Session key mint failed:", result.error);
         // Could add UI error handling here if needed
@@ -120,13 +114,13 @@ export function Mint() {
       console.error("Smart mint error:", err);
       // Could add UI error handling here if needed
     } finally {
-      setIsSmartMinting(false);
+      setIsMinting(false);
     }
   };
 
   return (
-    <Card variant="secondary">
-      <CardContent className="flex flex-col gap-2">
+    <div className="space-y-4">
+      <div className="bg-secondary p-4 space-y-4 rounded-lg">
         {Object.entries(TOKENS).map((token, index) => {
           return (
             <div
@@ -147,8 +141,8 @@ export function Mint() {
               </div>
               <Button
                 variant={isMinted(index) ? "success" : "default"}
-                disabled={isSmartMinting}
-                onClick={() => onMint(token[1].symbol)}
+                disabled={isMinting}
+                onClick={() => handleMint(token[1].symbol)}
                 className={cn(isMinted(index) && "pointer-events-none")}
               >
                 {isMinted(index) ? "Minted" : "Mint"}
@@ -156,50 +150,13 @@ export function Mint() {
             </div>
           );
         })}
-      </CardContent>
-
-      {/* Transaction Status */}
-      {smartMintResult?.hash && (
-        <div className="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg text-sm">
-          <div className="text-blue-300 flex items-center flex-wrap gap-1">
-            <span>
-              {smartMintResult?.usedSessionKey
-                ? "🔑 Session key"
-                : "🔐 Passkey"}{" "}
-              {currentToken} mint tx:
-            </span>
-            <CopyableAddress
-              address={smartMintResult?.hash || ""}
-              prefix={8}
-              suffix={6}
-              className="text-blue-400"
-            />
-            <a
-              href={`https://explorer.testnet.riselabs.xyz/tx/${smartMintResult?.hash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300"
-              title="View on explorer"
-            >
-              ↗
-            </a>
-            {smartMintResult?.success && (
-              <span className="text-green-400">✅</span>
-            )}
-          </div>
-          {smartMintResult?.usedSessionKey && smartMintResult?.keyId && (
-            <div className="text-blue-400 text-xs mt-1 flex items-center">
-              Used key:
-              <CopyableAddress
-                address={smartMintResult.keyId}
-                prefix={6}
-                suffix={6}
-                className="text-blue-400 ml-1"
-              />
-            </div>
-          )}
-        </div>
-      )}
-    </Card>
+      </div>
+      <TransactionResult
+        isSuccess={!!transactionResult?.hash}
+        isSessionKey={transactionResult?.usedSessionKey}
+        transactionHash={transactionResult?.hash}
+        transactionAddr={transactionResult?.keyId}
+      />
+    </div>
   );
 }
