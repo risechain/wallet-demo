@@ -25,6 +25,7 @@ export function useTransfer() {
 
     calls.push({
       to: address, // tokenAddress
+      value: 0n,
       data: encodeFunctionData({
         abi: MintableERC20ABI,
         functionName: "transfer",

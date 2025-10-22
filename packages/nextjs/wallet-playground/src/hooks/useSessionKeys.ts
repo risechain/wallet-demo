@@ -30,6 +30,8 @@ export function useSessionKeys() {
   // Use Porto's built-in hooks - much simpler!
   const { data: permissions, isLoading: loading } = Hooks.usePermissions();
 
+  console.log("permissions:: ", permissions);
+
   const grantPermissions = Hooks.useGrantPermissions();
   const revokePermissions = Hooks.useRevokePermissions();
 
@@ -178,8 +180,7 @@ export function useSessionKeys() {
         expiry: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour
         feeToken: {
           limit: "1" as any,
-          symbol: "EXP",
-          // symbol: TOKENS.MockUSD.symbol,
+          // symbol: "EXP",
         },
         permissions: {
           calls: [
@@ -195,14 +196,6 @@ export function useSessionKeys() {
               to: UNISWAP_CONTRACTS.router,
               signature:
                 "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
-            },
-            {
-              to: TOKENS.MockUSD.address,
-              signature: "approve(address,uint256)",
-            },
-            {
-              to: TOKENS.MockToken.address,
-              signature: "approve(address,uint256)",
             },
           ],
           spend: [

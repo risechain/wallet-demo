@@ -39,6 +39,7 @@ export function useSwap() {
       // TODO: separate and use passkey temporarily
       {
         to: fromAddress,
+        value: 0n,
         data: encodeFunctionData({
           abi: MintableERC20ABI,
           functionName: "approve",
@@ -49,6 +50,7 @@ export function useSwap() {
       // Swap
       {
         to: UNISWAP_CONTRACTS.router,
+        value: 0n,
         data: encodeFunctionData({
           abi: UniswapV2RouterABI,
           functionName: "swapExactTokensForTokens",
