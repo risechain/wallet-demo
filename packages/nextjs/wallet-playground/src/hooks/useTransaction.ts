@@ -33,7 +33,7 @@ export function useTransaction() {
 
   const { isSessionKeyEnabled } = useUserPreference();
 
-  const { connector } = useAccount();
+  const { connector, address } = useAccount();
   const chainId = useChainId();
 
   const { sendCallsAsync } = useSendCalls();
@@ -111,7 +111,7 @@ export function useTransaction() {
     try {
       const provider = (await connector.getProvider()) as any;
 
-      // Prepare calls
+      // Prepare calls to simulate and estimate fees
       const { digest, ...request } = await provider.request({
         method: "wallet_prepareCalls",
         params: [
@@ -126,7 +126,7 @@ export function useTransaction() {
         ],
       });
 
-      // Sign the call
+      // Sign the intent
       const signature = Signature.toHex(
         P256.sign({
           payload: digest as `0x${string}`,
@@ -145,10 +145,24 @@ export function useTransaction() {
         ],
       });
 
+      console.log("session-request:: ", request);
       console.log("session-result:: ", result);
       console.log("session-signature:: ", signature);
       console.log("session-digest:: ", digest);
       console.log("session-key:: ", key);
+
+      // For debugging only
+      const walletKeys = await provider.request({
+        method: "wallet_getKeys",
+        params: [
+          {
+            address,
+            chainIds: [Hex.fromNumber(chainId)],
+          },
+        ],
+      });
+
+      console.log("session-walletKeys:: ", walletKeys);
 
       return {
         success: true,
