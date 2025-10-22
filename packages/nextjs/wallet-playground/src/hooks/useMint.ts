@@ -10,13 +10,6 @@ export type MintTokenProps = {
   name?: string;
 };
 
-export type MintData = {
-  hash: string;
-  success: boolean;
-  usedSessionKey?: boolean;
-  keyId?: string;
-};
-
 export function useMint() {
   const { execute } = useTransaction();
 
@@ -60,7 +53,11 @@ export function useMint() {
   }, [result?.error]);
 
   const errorMessage = useMemo(() => {
-    return result?.error?.shortMessage ?? result?.error?.cause?.shortMessage;
+    return (
+      result?.error?.shortMessage ??
+      result?.error?.cause?.shortMessage ??
+      result?.error?.message
+    );
   }, [result?.error]);
 
   const data = useMemo(() => {

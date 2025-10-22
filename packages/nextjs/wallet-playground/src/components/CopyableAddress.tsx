@@ -17,10 +17,10 @@ export function CopyableAddress({
   prefix = 6,
   suffix = 4,
   showCopyIcon = true,
-}: CopyableAddressProps) {
+}: Readonly<CopyableAddressProps>) {
   const [copied, setCopied] = useState(false);
 
-  const shortenedAddress = `${address.slice(0, prefix)}...${address.slice(-suffix)}`;
+  const shortenedAddress = `${address?.slice(0, prefix)}...${address?.slice(-suffix)}`;
 
   const handleCopy = async () => {
     try {

@@ -1,3 +1,4 @@
+import { TransactionCall } from "@/hooks/useTransaction";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -33,4 +34,8 @@ export function maskAddress(
  */
 export function shortAddress(address: string | undefined): string {
   return maskAddress(address, 6, 4);
+}
+
+export function extractContractAddresses(calls: TransactionCall[]): string[] {
+  return calls.map((call) => call.to.toLowerCase()).filter(Boolean);
 }

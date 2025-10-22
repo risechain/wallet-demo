@@ -9,13 +9,6 @@ export type TransferProps = {
   parsedAmount: bigint;
 };
 
-export type MintData = {
-  hash: string;
-  success: boolean;
-  usedSessionKey?: boolean;
-  keyId?: string;
-};
-
 export function useTransfer() {
   const { execute } = useTransaction();
 
@@ -30,7 +23,7 @@ export function useTransfer() {
     const calls: TransactionCall[] = [];
 
     calls.push({
-      to: address,
+      to: address, // tokenAddress
       data: encodeFunctionData({
         abi: MintableERC20ABI,
         functionName: "transfer",
@@ -61,7 +54,11 @@ export function useTransfer() {
   }, [result?.error]);
 
   const errorMessage = useMemo(() => {
-    return result?.error?.shortMessage ?? result?.error?.cause?.shortMessage;
+    return (
+      result?.error?.shortMessage ??
+      result?.error?.cause?.shortMessage ??
+      result?.error?.message
+    );
   }, [result?.error]);
 
   const data = useMemo(() => {

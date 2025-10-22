@@ -90,7 +90,7 @@ export function TransactionResult(props: Readonly<ResultProps>) {
       )}
 
       {errorMessage && (
-        <div className="p-4 bg-destructive/5 rounded-md">
+        <div className="p-4 bg-destructive/5 rounded-md max-w-xl break-all max-h-72 overflow-auto">
           <p className="text-sm text-destructive">{errorMessage}</p>
         </div>
       )}
