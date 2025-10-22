@@ -4,7 +4,7 @@ import { TOKENS, UNISWAP_CONTRACTS } from "@/config/tokens";
 import { P256, PublicKey, Value } from "ox";
 import { Hooks } from "porto/wagmi";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { keccak256, toHex } from "viem";
+import { keccak256, parseEther, toHex } from "viem";
 import { useAccount } from "wagmi";
 
 export interface SessionKey {
@@ -173,6 +173,94 @@ export function useSessionKeys() {
         JSON.stringify({ privateKey, publicKey })
       );
 
+      const provider = (await connector.getProvider()) as any;
+
+      const permissions = await provider.request({
+        method: "wallet_grantPermissions",
+        key: { publicKey, type: "p256" as const },
+        params: [
+          {
+            expiry: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 1 week
+            feeToken: {
+              limit: "1",
+              symbol: "ETH",
+            },
+            permissions: {
+              calls: [
+                {
+                  to: TOKENS.MockUSD.address,
+                  signature: keccak256(
+                    toHex("transfer(address,uint256)")
+                  ).slice(0, 10),
+                },
+                {
+                  to: TOKENS.MockToken.address,
+                  signature: keccak256(
+                    toHex("transfer(address,uint256)")
+                  ).slice(0, 10),
+                },
+                {
+                  to: UNISWAP_CONTRACTS.router,
+                  signature: keccak256(
+                    toHex(
+                      "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)"
+                    )
+                  ).slice(0, 10),
+                },
+              ],
+              spend: [
+                {
+                  limit: toHex(parseEther("50")),
+                  period: "minute" as const,
+                  token: TOKENS.MockUSD.address,
+                },
+                {
+                  limit: toHex(parseEther("50")),
+                  period: "minute" as const,
+                  token: TOKENS.MockToken.address,
+                },
+              ],
+            },
+          },
+        ],
+      });
+
+      console.log("permissionParams:: ", toHex(parseEther("50")), permissions);
+
+      // Use Porto's hook instead of manual provider call
+      // const result = await grantPermissions.mutateAsync(permissions);
+      // Session key created successfully
+      return permissions;
+    } catch (error) {
+      console.error("Failed to create session key:", error);
+      throw error;
+    } finally {
+      setIsCreating(false);
+    }
+  }, [isConnected, address, grantPermissions]);
+
+  const manualCreateSessionKey = useCallback(async () => {
+    if (!isConnected || !address) {
+      throw new Error("Wallet not connected");
+    }
+
+    setIsCreating(true);
+    try {
+      // Generate key pair like playground
+      const privateKey = P256.randomPrivateKey();
+      const publicKey = PublicKey.toHex(P256.getPublicKey({ privateKey }), {
+        includePrefix: false,
+      });
+
+      // Store in module variable like playground
+      keyPair = { privateKey, publicKey };
+
+      // Also store in localStorage so we can flag it later
+      localStorage.setItem(
+        `porto.sessionKey.${publicKey}`,
+        JSON.stringify({ privateKey, publicKey })
+      );
+
       // Simple permissions structure like playground
       const permissionParams = {
         key: { publicKey, type: "p256" as const },
@@ -186,7 +274,6 @@ export function useSessionKeys() {
           calls: [
             {
               to: TOKENS.MockUSD.address,
-              // signature: "transfer(address,uint256)",
               signature: keccak256(toHex("transfer(address,uint256)")).slice(
                 0,
                 10
@@ -194,7 +281,6 @@ export function useSessionKeys() {
             },
             {
               to: TOKENS.MockToken.address,
-              // signature: "transfer(address,uint256)",
               signature: keccak256(toHex("transfer(address,uint256)")).slice(
                 0,
                 10
@@ -202,7 +288,6 @@ export function useSessionKeys() {
             },
             {
               to: UNISWAP_CONTRACTS.router,
-              // signature: "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
               signature: keccak256(
                 toHex(
                   "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)"
