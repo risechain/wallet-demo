@@ -1,4 +1,5 @@
 import { useUserPreference } from "@/context/UserPreference";
+import { flatten, isArray } from "lodash";
 import { Hex, P256, Signature } from "ox";
 import { Address, Hex as HexAddress } from "viem";
 import { useAccount, useChainId, useSendCalls } from "wagmi";
@@ -145,6 +146,12 @@ export function useTransaction() {
         ],
       });
 
+      let resp = result;
+
+      if (isArray(result)) {
+        resp = flatten(result);
+      }
+
       console.log("session-result:: ", result);
       console.log("session-signature:: ", signature);
       console.log("session-digest:: ", digest);
@@ -153,7 +160,7 @@ export function useTransaction() {
       return {
         success: true,
         error: null,
-        data: { ...result, usedSessionKey: true },
+        data: { ...resp, usedSessionKey: true },
       };
     } catch (error) {
       console.log("execute-with-sessionkey-error:: ", error);
