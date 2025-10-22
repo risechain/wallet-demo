@@ -36,6 +36,7 @@ export function useSwap() {
 
     calls.push(
       // Approve first -- TODO: add handling for allowance check here
+      // TODO: separate and use passkey temporarily
       {
         to: fromAddress,
         data: encodeFunctionData({

@@ -1,10 +1,9 @@
 "use client";
 
 import { TOKENS, UNISWAP_CONTRACTS } from "@/config/tokens";
-import { Hex, P256, PublicKey, Signature, Value } from "ox";
+import { P256, PublicKey, Value } from "ox";
 import { Hooks } from "porto/wagmi";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Address } from "viem";
 import { useAccount } from "wagmi";
 
 export interface SessionKey {
@@ -178,20 +177,44 @@ export function useSessionKeys() {
         key: { publicKey, type: "p256" as const },
         expiry: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour
         feeToken: {
-          limit: "1.0",
+          limit: "1" as any,
           symbol: "EXP",
+          // symbol: TOKENS.MockUSD.symbol,
         },
         permissions: {
           calls: [
-            { to: TOKENS.MockUSD.address },
-            { to: TOKENS.MockToken.address },
-            { to: UNISWAP_CONTRACTS.router },
+            {
+              to: TOKENS.MockUSD.address,
+              signature: "transfer(address,uint256)",
+            },
+            {
+              to: TOKENS.MockToken.address,
+              signature: "transfer(address,uint256)",
+            },
+            {
+              to: UNISWAP_CONTRACTS.router,
+              signature:
+                "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
+            },
+            {
+              to: TOKENS.MockUSD.address,
+              signature: "approve(address,uint256)",
+            },
+            {
+              to: TOKENS.MockToken.address,
+              signature: "approve(address,uint256)",
+            },
           ],
           spend: [
             {
               limit: Value.fromEther("50"),
               period: "minute" as const,
               token: TOKENS.MockUSD.address,
+            },
+            {
+              limit: Value.fromEther("50"),
+              period: "minute" as const,
+              token: TOKENS.MockToken.address,
             },
           ],
         },
@@ -208,59 +231,6 @@ export function useSessionKeys() {
       setIsCreating(false);
     }
   }, [isConnected, address, grantPermissions]);
-
-  const executeWithSessionKey = useCallback(
-    async (calls: Array<{ to: string; data?: string; value?: string }>) => {
-      if (!keyPair) {
-        throw new Error("create key first.");
-      }
-
-      // Use the connector from the hook state
-      if (!connector) throw new Error("No connector available");
-
-      const provider = (await connector.getProvider()) as any;
-      const chainId = Hex.toNumber(
-        await provider.request({ method: "eth_chainId" })
-      );
-
-      // Prepare calls like playground
-      const { digest, ...request } = await provider.request({
-        method: "wallet_prepareCalls",
-        params: [
-          {
-            calls,
-            chainId: Hex.fromNumber(chainId),
-            key: {
-              publicKey: keyPair.publicKey,
-              type: "p256",
-            },
-          },
-        ],
-      });
-
-      // Sign like playground
-      const signature = Signature.toHex(
-        P256.sign({
-          payload: digest as `0x${string}`,
-          privateKey: keyPair.privateKey as Address,
-        })
-      );
-
-      // Send like playground
-      const [{ id: hash }] = await provider.request({
-        method: "wallet_sendPreparedCalls",
-        params: [
-          {
-            ...request,
-            signature,
-          },
-        ],
-      });
-
-      return { success: true, hash, usedSessionKey: true };
-    },
-    [connector]
-  );
 
   // TODO: deprecate this
   // Check if we have a USABLE session key (both local private key AND active permission)
@@ -378,7 +348,6 @@ export function useSessionKeys() {
     sessionKeys,
     activeKeys,
     createSessionKey,
-    executeWithSessionKey,
     hasSessionKey,
     getUsableSessionKey,
     activeSessionKeys,
