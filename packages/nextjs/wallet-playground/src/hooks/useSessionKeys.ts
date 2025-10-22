@@ -187,7 +187,7 @@ export function useSessionKeys() {
             {
               to: TOKENS.MockUSD.address,
               // signature: "transfer(address,uint256)",
-              selector: keccak256(toHex("transfer(address,uint256)")).slice(
+              signature: keccak256(toHex("transfer(address,uint256)")).slice(
                 0,
                 10
               ),
@@ -195,7 +195,7 @@ export function useSessionKeys() {
             {
               to: TOKENS.MockToken.address,
               // signature: "transfer(address,uint256)",
-              selector: keccak256(toHex("transfer(address,uint256)")).slice(
+              signature: keccak256(toHex("transfer(address,uint256)")).slice(
                 0,
                 10
               ),
@@ -203,7 +203,7 @@ export function useSessionKeys() {
             {
               to: UNISWAP_CONTRACTS.router,
               // signature: "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
-              selector: keccak256(
+              signature: keccak256(
                 toHex(
                   "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)"
                 )
@@ -224,6 +224,8 @@ export function useSessionKeys() {
           ],
         },
       };
+
+      console.log("permissionParams:: ", permissionParams);
 
       // Use Porto's hook instead of manual provider call
       const result = await grantPermissions.mutateAsync(permissionParams);
