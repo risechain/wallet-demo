@@ -287,6 +287,20 @@ export function useSessionKeys() {
               ),
             },
             {
+              to: TOKENS.MockUSD.address,
+              signature: keccak256(toHex("approve(address,uint256)")).slice(
+                0,
+                10
+              ),
+            },
+            {
+              to: TOKENS.MockToken.address,
+              signature: keccak256(toHex("approve(address,uint256)")).slice(
+                0,
+                10
+              ),
+            },
+            {
               to: UNISWAP_CONTRACTS.router,
               signature: keccak256(
                 toHex(
