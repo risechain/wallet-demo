@@ -54,7 +54,8 @@ export function AppSidebar() {
 
   const [hasMounted, setHasMounted] = useState(false);
 
-  const { getWalletKeys, getCapabilities, getPermissions } = useTransaction();
+  const { getWalletKeys, getCapabilities, getPermissions, extractPermission } =
+    useTransaction();
 
   useEffect(() => {
     setHasMounted(true);
@@ -159,6 +160,17 @@ export function AppSidebar() {
                   }}
                 >
                   Get Permissions
+                </Button>
+              </SidebarMenuItem>
+              <SidebarMenuItem className="flex justify-between items-center">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => {
+                    extractPermission();
+                  }}
+                >
+                  Extract Permissions
                 </Button>
               </SidebarMenuItem>
             </SidebarMenu>

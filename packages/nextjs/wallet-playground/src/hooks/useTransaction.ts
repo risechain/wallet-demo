@@ -1,3 +1,4 @@
+import { PERMISSIONS } from "@/config/permissions";
 import { useUserPreference } from "@/context/UserPreference";
 import { Hex, P256, Signature } from "ox";
 import { Address, Hex as HexAddress } from "viem";
@@ -112,20 +113,36 @@ export function useTransaction() {
     try {
       const provider = (await connector.getProvider()) as any;
 
+      const intentParams = [
+        {
+          calls,
+          capabilities: {
+            authorizeKeys: [
+              {
+                key: {
+                  publicKey: key.publicKey,
+                  type: "p256",
+                },
+                permissions: extractPermission(),
+              },
+            ],
+          },
+          chainId: Hex.fromNumber(chainId),
+          from: address,
+          key: {
+            publicKey: key.publicKey,
+            type: "p256",
+          },
+        },
+      ];
+
       // Prepare calls to simulate and estimate fees
       const { digest, capabilities, ...request } = await provider.request({
         method: "wallet_prepareCalls",
-        params: [
-          {
-            calls,
-            chainId: Hex.fromNumber(chainId),
-            key: {
-              publicKey: key.publicKey,
-              type: "p256",
-            },
-          },
-        ],
+        params: intentParams,
       });
+
+      console.log("intentParams:: ", intentParams);
 
       // Sign the intent
       const signature = Signature.toHex(
@@ -148,6 +165,7 @@ export function useTransaction() {
       });
 
       console.log("session-request:: ", request);
+      console.log("session-capabilities:: ", capabilities);
       console.log("session-result:: ", result);
       console.log("session-signature:: ", signature);
       console.log("session-digest:: ", digest);
@@ -208,6 +226,29 @@ export function useTransaction() {
     console.log("session-permissions:: ", permissions);
   }
 
+  function extractPermission() {
+    const calls = PERMISSIONS.calls.map((call) => {
+      return {
+        type: "call",
+        selector: call.signature,
+        to: call.to,
+      };
+    });
+
+    const limits = PERMISSIONS.spend.map((spend) => {
+      return {
+        type: "spend",
+        limit: spend.limit,
+        period: spend.period,
+      };
+    });
+
+    const permissions = [...calls, ...limits];
+
+    console.log("extracted-permissions:: ", permissions);
+    return permissions;
+  }
+
   return {
     execute,
     executeWithPasskey,
@@ -215,5 +256,6 @@ export function useTransaction() {
     getWalletKeys,
     getCapabilities,
     getPermissions,
+    extractPermission,
   };
 }

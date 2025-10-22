@@ -1,10 +1,9 @@
 "use client";
 
-import { TOKENS, UNISWAP_CONTRACTS } from "@/config/tokens";
-import { P256, PublicKey, Value } from "ox";
+import { PERMISSIONS } from "@/config/permissions";
+import { P256, PublicKey } from "ox";
 import { Hooks } from "porto/wagmi";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { keccak256, toHex } from "viem";
 import { useAccount } from "wagmi";
 
 export interface SessionKey {
@@ -182,58 +181,7 @@ export function useSessionKeys() {
           // symbol: "EXP",
           symbol: "ETH",
         },
-        permissions: {
-          calls: [
-            {
-              to: TOKENS.MockUSD.address,
-              signature: keccak256(toHex("transfer(address,uint256)")).slice(
-                0,
-                10
-              ),
-            },
-            {
-              to: TOKENS.MockToken.address,
-              signature: keccak256(toHex("transfer(address,uint256)")).slice(
-                0,
-                10
-              ),
-            },
-            {
-              to: TOKENS.MockUSD.address,
-              signature: keccak256(toHex("approve(address,uint256)")).slice(
-                0,
-                10
-              ),
-            },
-            {
-              to: TOKENS.MockToken.address,
-              signature: keccak256(toHex("approve(address,uint256)")).slice(
-                0,
-                10
-              ),
-            },
-            {
-              to: UNISWAP_CONTRACTS.router,
-              signature: keccak256(
-                toHex(
-                  "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)"
-                )
-              ).slice(0, 10),
-            },
-          ],
-          spend: [
-            {
-              limit: Value.fromEther("50"),
-              period: "minute" as const,
-              token: TOKENS.MockUSD.address,
-            },
-            {
-              limit: Value.fromEther("50"),
-              period: "minute" as const,
-              token: TOKENS.MockToken.address,
-            },
-          ],
-        },
+        permissions: PERMISSIONS,
       };
 
       console.log("permissionParams:: ", permissionParams);
