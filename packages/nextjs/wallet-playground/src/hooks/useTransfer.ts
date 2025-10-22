@@ -10,6 +10,7 @@ export type TransferProps = {
 };
 
 export function useTransfer() {
+  console.log("Transfer Hook...");
   const { execute } = useTransaction();
 
   const [isPending, setIsPending] = useState<boolean>(false);
@@ -43,7 +44,9 @@ export function useTransfer() {
     return response;
   }
 
-  // 0x8F8faa9eBB54DEda91a62B4FC33550B19B9d33bf
+  // 0x8F8faa9eBB54DEda91a62B4FC33550B19B9d33bf - metamask
+  // 0x0e18ace8b124aad65e81c439bfecad5abe9eafc4 - riselabs
+  // 0xE1C19095790FCe54bC2747B68664D1184288Ebb7 - personal
 
   const isSuccess = useMemo(() => {
     return !!result?.success;

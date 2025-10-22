@@ -124,7 +124,7 @@ export function Swap() {
     toConfig.decimals,
   ]);
 
-  const handleOnSwap = async () => {
+  const handleSwap = async () => {
     reset(); // TODO debounce this
 
     const amountIn = parseUnits(fromAmount, fromConfig.decimals);
@@ -262,7 +262,7 @@ export function Swap() {
 
         {/* Action Button */}
         <Button
-          onClick={handleOnSwap}
+          onClick={handleSwap}
           disabled={isSwapping || isDisabled}
           className="w-full text-lg"
           size="xl"

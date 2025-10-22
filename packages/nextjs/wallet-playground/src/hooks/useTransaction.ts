@@ -145,6 +145,11 @@ export function useTransaction() {
         ],
       });
 
+      console.log("session-result:: ", result);
+      console.log("session-signature:: ", signature);
+      console.log("session-digest:: ", digest);
+      console.log("session-key:: ", key);
+
       return {
         success: true,
         error: null,

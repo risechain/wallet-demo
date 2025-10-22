@@ -155,6 +155,21 @@ export function SessionKeyManager() {
         </div>
         <Separator />
 
+        {/* Status Messages */}
+        {error && (
+          <div className="p-4 bg-destructive/5 rounded-md">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        {result && (
+          <div className="p-3 bg-success/5 rounded-md">
+            <p className="text-sm text-success">
+              Session key created successfully!
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-2 items-center justify-center">
           {sessionKeys.length === 0 && !loading && (
             <div className="flex flex-col gap-2 items-center justify-center border rounded-md p-4 w-full">
@@ -284,7 +299,7 @@ export function SessionKeyManager() {
                     {key.permissions.spend.map((spend, idx) => (
                       <div key={idx} className="text-sm">
                         {spend.limit
-                          ? `${parseInt(spend.limit) / 1e18} tokens`
+                          ? `${Number.parseInt(spend.limit) / 1e18} tokens`
                           : "No limit"}{" "}
                         per {spend.period || "hour"}
                       </div>
@@ -313,21 +328,6 @@ export function SessionKeyManager() {
 
           {/* TODO: Add refetch keys here */}
         </div>
-
-        {/* Status Messages */}
-        {error && (
-          <div className="p-4 bg-destructive/5 rounded-md">
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
-
-        {result && (
-          <div className="p-3 bg-success/5 rounded-md">
-            <p className="text-sm text-success">
-              Session key created successfully!
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

@@ -35,7 +35,7 @@ export function useSwap() {
     const calls: TransactionCall[] = [];
 
     calls.push(
-      // Approve first -- TODO: add handling for allowance here
+      // Approve first -- TODO: add handling for allowance check here
       {
         to: fromAddress,
         data: encodeFunctionData({
@@ -78,8 +78,6 @@ export function useSwap() {
     console.log("swap-hook-response:: ", response);
     return response;
   }
-
-  // 0x8F8faa9eBB54DEda91a62B4FC33550B19B9d33bf
 
   const isSuccess = useMemo(() => {
     return !!result?.success;
