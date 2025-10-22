@@ -3,8 +3,8 @@
 import { useSessionKeys } from "@/hooks/useSessionKeys";
 import { cn } from "@/lib/utils";
 import { Info } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import pluralize from "pluralize-esm";
+import { useState } from "react";
 import { CopyableAddress } from "./CopyableAddress";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -22,51 +22,23 @@ function formatTimeRemaining(expiry: number): string {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days > 0) return `${days} day${days !== 1 ? "s" : ""}`;
-  if (hours > 0) return `${hours} hour${hours !== 1 ? "s" : ""}`;
-  return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+  if (days > 0) return `${days} ${pluralize("day", days)}`;
+  if (hours > 0) return `${hours} ${pluralize("hour", hours)}`;
+  return `${minutes} ${pluralize("minute", minutes)}`;
 }
 
 export function SessionKeyManager() {
-  const { isConnected } = useAccount();
   const {
     sessionKeys,
     createSessionKey,
-    hasSessionKey,
     revokeSessionKey,
-    fetchSessionKeys,
     isCreating,
     loading,
   } = useSessionKeys();
 
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState("");
-  const [mounted, setMounted] = useState(false);
   const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Clear messages after some time
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(""), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
-  if (!mounted) {
-    return (
-      <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-700 rounded w-1/4"></div>
-          <div className="h-20 bg-gray-700 rounded"></div>
-          <div className="h-8 bg-gray-700 rounded w-1/3 mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
 
   const handleCreateKey = async () => {
     try {
@@ -268,24 +240,29 @@ export function SessionKeyManager() {
                       Allowed Contracts:
                     </div>
                     <div className="space-y-2 pt-4">
-                      {key.permissions.calls.map((call, idx) => (
-                        <div
-                          key={call.signature}
-                          className="text-xs text-gray-300 flex items-center"
-                        >
-                          •{" "}
-                          {call.to ? (
-                            <CopyableAddress
-                              address={call.to}
-                              prefix={6}
-                              suffix={4}
-                              className="text-gray-300 ml-1"
-                            />
-                          ) : (
-                            "Any contract"
-                          )}
-                        </div>
-                      ))}
+                      {key.permissions.calls.map((call, idx) => {
+                        return (
+                          <div
+                            key={`${call.signature}-${call.to}`}
+                            className="text-xs text-gray-300 flex items-center"
+                          >
+                            •{" "}
+                            {call.to ? (
+                              <div className="flex gap-2 items-center w-full justify-between">
+                                <CopyableAddress
+                                  address={call.to}
+                                  prefix={6}
+                                  suffix={4}
+                                  className="text-gray-300 ml-1"
+                                />
+                                <p>{call.signature}</p>
+                              </div>
+                            ) : (
+                              "Any contract"
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

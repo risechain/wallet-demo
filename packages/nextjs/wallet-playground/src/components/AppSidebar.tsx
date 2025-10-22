@@ -54,7 +54,7 @@ export function AppSidebar() {
 
   const [hasMounted, setHasMounted] = useState(false);
 
-  const { checkWalletKeys } = useTransaction();
+  const { getWalletKeys, getCapabilities, getPermissions } = useTransaction();
 
   useEffect(() => {
     setHasMounted(true);
@@ -127,16 +127,38 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Debug</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="px-2 gap-4">
+            <SidebarMenu className="px-2 gap-1">
               <SidebarMenuItem className="flex justify-between items-center">
                 <Button
                   className="w-full"
                   variant="outline"
                   onClick={() => {
-                    checkWalletKeys();
+                    getWalletKeys();
                   }}
                 >
-                  Check Wallet Keys
+                  Get Wallet Keys
+                </Button>
+              </SidebarMenuItem>
+              <SidebarMenuItem className="flex justify-between items-center">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => {
+                    getCapabilities();
+                  }}
+                >
+                  Get Capabilities
+                </Button>
+              </SidebarMenuItem>
+              <SidebarMenuItem className="flex justify-between items-center">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => {
+                    getPermissions();
+                  }}
+                >
+                  Get Permissions
                 </Button>
               </SidebarMenuItem>
             </SidebarMenu>

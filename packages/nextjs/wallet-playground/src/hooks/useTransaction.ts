@@ -31,10 +31,11 @@ export function useTransaction() {
     keyPair: key,
   } = useSessionKeys();
 
+  const chainId = useChainId();
+
   const { isSessionKeyEnabled } = useUserPreference();
 
   const { connector, address } = useAccount();
-  const chainId = useChainId();
 
   const { sendCallsAsync } = useSendCalls();
 
@@ -112,7 +113,7 @@ export function useTransaction() {
       const provider = (await connector.getProvider()) as any;
 
       // Prepare calls to simulate and estimate fees
-      const { digest, ...request } = await provider.request({
+      const { digest, capabilities, ...request } = await provider.request({
         method: "wallet_prepareCalls",
         params: [
           {
@@ -140,6 +141,7 @@ export function useTransaction() {
         params: [
           {
             ...request,
+            ...(capabilities ? { capabilities } : {}),
             signature,
           },
         ],
@@ -166,7 +168,7 @@ export function useTransaction() {
     }
   }
 
-  async function checkWalletKeys() {
+  async function getWalletKeys() {
     // For debugging only
     const provider = (await connector.getProvider()) as any;
 
@@ -182,10 +184,36 @@ export function useTransaction() {
     console.log("session-walletKeys:: ", walletKeys);
   }
 
+  async function getCapabilities() {
+    // For debugging only
+    const provider = (await connector.getProvider()) as any;
+
+    const capabilities = await provider.request({
+      method: "wallet_getCapabilities",
+      params: [Hex.fromNumber(chainId)],
+    });
+
+    console.log("session-capabilities:: ", capabilities);
+  }
+
+  async function getPermissions() {
+    // For debugging only
+    const provider = (await connector.getProvider()) as any;
+
+    const permissions = await provider.request({
+      method: "wallet_getPermissions",
+      params: [{ address }],
+    });
+
+    console.log("session-permissions:: ", permissions);
+  }
+
   return {
     execute,
     executeWithPasskey,
     executeWithSessionKey,
-    checkWalletKeys,
+    getWalletKeys,
+    getCapabilities,
+    getPermissions,
   };
 }
