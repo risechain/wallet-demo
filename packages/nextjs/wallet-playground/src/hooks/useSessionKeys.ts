@@ -151,7 +151,7 @@ export function useSessionKeys() {
     }
   }, [sessionKeys]); // Re-run when sessionKeys change
 
-  const createSessionKey = useCallback(async () => {
+  const manualCreateSessionKey = useCallback(async () => {
     if (!isConnected || !address) {
       throw new Error("Wallet not connected");
     }
@@ -239,7 +239,7 @@ export function useSessionKeys() {
     }
   }, [isConnected, address, grantPermissions]);
 
-  const manualCreateSessionKey = useCallback(async () => {
+  const createSessionKey = useCallback(async () => {
     if (!isConnected || !address) {
       throw new Error("Wallet not connected");
     }
