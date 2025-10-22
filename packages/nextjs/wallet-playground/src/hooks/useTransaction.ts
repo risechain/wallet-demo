@@ -1,11 +1,12 @@
 import { useUserPreference } from "@/context/UserPreference";
-import { Hex } from "viem";
-import { useSendCalls } from "wagmi";
+import { Hex, P256, Signature } from "ox";
+import { Address, Hex as HexAddress } from "viem";
+import { useAccount, useChainId, useSendCalls } from "wagmi";
 import { useSessionKeys } from "./useSessionKeys";
 
 export type TransactionCall = {
-  to: Hex;
-  data?: Hex;
+  to: HexAddress;
+  data?: HexAddress;
   value?: bigint;
 };
 
@@ -24,10 +25,16 @@ export type TransactionData = {
 };
 
 export function useTransaction() {
-  const { executeWithSessionKey, activeSessionKeys, hasUsableSessionKey } =
-    useSessionKeys();
+  const {
+    activeSessionKeys: sessionKey,
+    hasUsableSessionKey,
+    keyPair: key,
+  } = useSessionKeys();
 
   const { isSessionKeyEnabled } = useUserPreference();
+
+  const { connector } = useAccount();
+  const chainId = useChainId();
 
   const { sendCallsAsync } = useSendCalls();
 
@@ -35,12 +42,13 @@ export function useTransaction() {
     console.log("executing...");
     const { calls, requiredPermissions } = props;
 
-    if (isSessionKeyEnabled && activeSessionKeys && hasUsableSessionKey) {
+    if (isSessionKeyEnabled && sessionKey && hasUsableSessionKey) {
+      console.log("activeSessionKeys:: ", sessionKey);
       const callAddresses = requiredPermissions.calls.map((addr) =>
         addr.toLowerCase()
       );
 
-      const permissions = activeSessionKeys.permissions?.calls || [];
+      const permissions = sessionKey.permissions?.calls || [];
 
       const isPermitted = callAddresses.every((requiredAddress) =>
         permissions.some(
@@ -54,15 +62,14 @@ export function useTransaction() {
           const result = await executeWithSessionKey(calls);
 
           return {
-            success: true,
             error: null,
-            data: { ...result, keyId: activeSessionKeys.id },
+            ...result,
           };
         } else {
           return executeWithPasskey(calls);
         }
       } catch (error) {
-        console.log("Execute-Error: ", error);
+        console.log("execute-error: ", error);
         return {
           success: false,
           error,
@@ -75,6 +82,7 @@ export function useTransaction() {
   }
 
   async function executeWithPasskey(calls: TransactionCall[]) {
+    console.log("executing using passkey....");
     try {
       // TODO: Fix type instantation issue - wagmi
       const result = await sendCallsAsync({
@@ -88,8 +96,62 @@ export function useTransaction() {
         data: { ...result, usedSessionKey: false },
       };
     } catch (error) {
-      console.log("Execute-Passkey-Error: ", error);
+      console.log("execute-with-passkey-error: ", error);
 
+      return {
+        success: false,
+        error,
+        data: null,
+      };
+    }
+  }
+
+  async function executeWithSessionKey(calls: TransactionCall[]) {
+    console.log("executing using sessionkey....");
+    try {
+      const provider = (await connector.getProvider()) as any;
+
+      // Prepare calls
+      const { digest, ...request } = await provider.request({
+        method: "wallet_prepareCalls",
+        params: [
+          {
+            calls,
+            chainId: Hex.fromNumber(chainId),
+            key: {
+              publicKey: key.publicKey,
+              type: "p256",
+            },
+          },
+        ],
+      });
+
+      // Sign the call
+      const signature = Signature.toHex(
+        P256.sign({
+          payload: digest as `0x${string}`,
+          privateKey: key.privateKey as Address,
+        })
+      );
+
+      // Send like playground
+      const result = await provider.request({
+        method: "wallet_sendPreparedCalls",
+        params: [
+          {
+            ...request,
+            signature,
+          },
+        ],
+      });
+
+      return {
+        success: true,
+        error: null,
+        data: { ...result, usedSessionKey: true },
+      };
+    } catch (error) {
+      console.log("execute-with-sessionkey-error:: ", error);
       return {
         success: false,
         error,
@@ -101,5 +163,6 @@ export function useTransaction() {
   return {
     execute,
     executeWithPasskey,
+    executeWithSessionKey,
   };
 }

@@ -4,6 +4,7 @@ import { TOKENS, UNISWAP_CONTRACTS } from "@/config/tokens";
 import { Hex, P256, PublicKey, Signature, Value } from "ox";
 import { Hooks } from "porto/wagmi";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Address } from "viem";
 import { useAccount } from "wagmi";
 
 export interface SessionKey {
@@ -241,7 +242,7 @@ export function useSessionKeys() {
       const signature = Signature.toHex(
         P256.sign({
           payload: digest as `0x${string}`,
-          privateKey: keyPair.privateKey,
+          privateKey: keyPair.privateKey as Address,
         })
       );
 
@@ -373,6 +374,7 @@ export function useSessionKeys() {
   ).length;
 
   return {
+    keyPair,
     sessionKeys,
     activeKeys,
     createSessionKey,

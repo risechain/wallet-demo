@@ -44,9 +44,6 @@ export function SessionKeyManager() {
   const [mounted, setMounted] = useState(false);
   const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
 
-  // Get current key state - this will update when hasSessionKey changes
-  const keyExists = hasSessionKey();
-
   useEffect(() => {
     setMounted(true);
   }, []);

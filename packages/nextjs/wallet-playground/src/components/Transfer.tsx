@@ -1,23 +1,10 @@
 "use client";
 
-import { MintableERC20ABI } from "@/abi/erc20";
 import { TOKENS } from "@/config/tokens";
-import { useUserPreference } from "@/context/UserPreference";
-import { useSessionKeys } from "@/hooks/useSessionKeys";
-import {
-  executeTransaction,
-  extractContractAddresses,
-  TransactionCall,
-} from "@/utils/sessionKeyTransactions";
+import { useTransfer } from "@/hooks/useTransfer";
 import { ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  encodeFunctionData,
-  formatUnits,
-  isAddress,
-  parseEther,
-  parseUnits,
-} from "viem";
+import { useState } from "react";
+import { formatUnits, isAddress, parseUnits } from "viem";
 import { useAccount, useBalance } from "wagmi";
 import { TransactionHeader } from "./TransactionHeader";
 import { TransactionResult } from "./TransactionResult";
@@ -35,154 +22,63 @@ import { Spinner } from "./ui/spinner";
 type TokenSymbol = keyof typeof TOKENS;
 
 export function Transfer() {
-  const { address, isConnected, connector } = useAccount();
+  const { address } = useAccount();
 
-  const { hasSessionKey, executeWithSessionKey, getUsableSessionKey } =
-    useSessionKeys();
-  const { isSessionKeyEnabled } = useUserPreference();
+  const {
+    onTransfer,
+    isPending: isTransferring,
+    data: result,
+    errorMessage,
+    isSuccess,
+  } = useTransfer();
 
-  // Get current key state - this will update when hasSessionKey changes
-  const keyExists = hasSessionKey();
-  const usableSessionKey = getUsableSessionKey();
-
-  const [mounted, setMounted] = useState(false);
   const [selectedToken, setSelectedToken] = useState<TokenSymbol | "ETH">(
     "MockUSD"
   );
+
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
-  const [isTransferring, setIsTransferring] = useState(false);
-  const [transferResult, setTransferResult] = useState<{
-    hash?: string;
-    success: boolean;
-    usedSessionKey?: boolean;
-    keyId?: string;
-    error?: string;
-  } | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const isETH = selectedToken === "ETH";
   const token = isETH ? null : TOKENS[selectedToken];
 
   // Get balance
-  const { data: balance } = useBalance({
+  const { data: balance, refetch } = useBalance({
     address,
     token: token?.address,
   });
 
-  // Reset form after successful transfer
-  useEffect(() => {
-    if (transferResult?.success) {
-      setRecipient("");
-      setAmount("");
-      setError("");
-    }
-  }, [transferResult?.success]);
-
-  // Smart transfer function that uses session keys when available
-  const handleSmartTransfer = async () => {
-    setError("");
-    setTransferResult(null);
-
+  const handleTransfer = async () => {
     if (!isAddress(recipient)) {
-      setError("Invalid recipient address");
+      setError("Invalid recipient address!");
       return;
     }
 
     if (!amount || Number.parseFloat(amount) <= 0) {
-      setError("Invalid amount");
+      setError("Invalid amount!");
       return;
     }
 
-    if (!connector) {
-      setError("Wallet connector not available");
+    const tokenBalance = formatUnits(balance.value, balance.decimals);
+
+    if (Number.parseFloat(tokenBalance) < Number.parseFloat(amount)) {
+      setError("Insufficient Balance!");
       return;
     }
 
-    setIsTransferring(true);
+    const parsedAmount = parseUnits(amount, token.decimals);
 
-    try {
-      let calls: TransactionCall[] = [];
+    const response = await onTransfer({
+      address: token.address,
+      recipient,
+      parsedAmount,
+    });
 
-      if (isETH) {
-        const value = parseEther(amount);
-        if (balance && value > balance.value) {
-          setError("Insufficient balance");
-          setIsTransferring(false);
-          return;
-        }
-
-        calls = [
-          {
-            to: recipient,
-            value: value.toString(),
-            data: "0x",
-          },
-        ];
-      } else if (token) {
-        const parsedAmount = parseUnits(amount, token.decimals);
-        if (balance && parsedAmount > balance.value) {
-          setError("Insufficient balance");
-          setIsTransferring(false);
-          return;
-        }
-
-        const transferData = encodeFunctionData({
-          abi: MintableERC20ABI,
-          functionName: "transfer",
-          args: [recipient, parsedAmount],
-        });
-
-        calls = [
-          {
-            to: token.address,
-            data: transferData,
-            value: "0x0",
-          },
-        ];
-      }
-
-      const result = await executeTransaction(
-        calls,
-        {
-          preferSessionKey: isSessionKeyEnabled,
-          requiredPermissions: {
-            calls: extractContractAddresses(calls),
-          },
-        },
-        connector,
-        executeWithSessionKey,
-        keyExists,
-        usableSessionKey
-      );
-
-      if (result.success) {
-        setTransferResult(result);
-      } else {
-        setError(result.error || "Transfer failed");
-      }
-    } catch (err: any) {
-      console.error("Smart transfer error:", err);
-      setError(err.message || "Transfer failed");
-    } finally {
-      setIsTransferring(false);
+    if (response.success) {
+      refetch();
     }
   };
-
-  if (!mounted) {
-    return (
-      <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl text-center">
-        <p className="text-gray-400">Loading...</p>
-      </div>
-    );
-  }
-
-  const transferHash = transferResult?.hash;
-  const transferSuccess = transferResult?.success;
 
   return (
     <Card>
@@ -191,7 +87,6 @@ export function Transfer() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Token Selector */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -257,9 +152,8 @@ export function Transfer() {
           />
         </div>
 
-        {/* Transfer Button */}
         <Button
-          onClick={handleSmartTransfer}
+          onClick={handleTransfer}
           disabled={
             isTransferring ||
             !recipient ||
@@ -273,11 +167,11 @@ export function Transfer() {
         </Button>
 
         <TransactionResult
-          isSuccess={transferHash && transferSuccess}
-          isSessionKey={transferResult?.usedSessionKey}
-          transactionHash={transferHash}
-          transactionAddr={transferResult?.keyId}
-          errorMessage={error}
+          isSuccess={isSuccess}
+          isSessionKey={result?.usedSessionKey}
+          transactionHash={result?.id}
+          transactionAddr={result?.id}
+          errorMessage={error || errorMessage}
         />
       </CardContent>
     </Card>

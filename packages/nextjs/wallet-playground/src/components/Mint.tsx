@@ -10,6 +10,7 @@ import { useAccount, useReadContracts } from "wagmi";
 import { TransactionResult } from "./TransactionResult";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
+import { Spinner } from "./ui/spinner";
 
 export function Mint() {
   const { address } = useAccount();
@@ -25,6 +26,7 @@ export function Mint() {
   const {
     data: hasMinted,
     isSuccess,
+    isPending,
     refetch,
   } = useReadContracts({
     contracts: [
@@ -53,13 +55,11 @@ export function Mint() {
     [isSuccess]
   );
 
-  // Smart mint function that uses session keys when available
   const handleMint = async (address: Address) => {
     const response = await onMint({ address });
     if (response.success) {
       refetch();
     }
-    console.log("handleMint-response:: ", response);
   };
 
   return (
@@ -90,6 +90,8 @@ export function Mint() {
                 className={cn(isMinted(index) && "pointer-events-none")}
               >
                 {isMinted(index) ? "Already Minted" : "Mint"}
+
+                {isPending && <Spinner className="stroke-invert" />}
               </Button>
             </div>
           );

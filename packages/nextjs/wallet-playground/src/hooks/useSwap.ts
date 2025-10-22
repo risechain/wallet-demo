@@ -3,11 +3,10 @@ import { useMemo, useState } from "react";
 import { Address, encodeFunctionData } from "viem";
 import { TransactionCall, useTransaction } from "./useTransaction";
 
-export type MintTokenProps = {
+export type TransferProps = {
   address: Address;
-  decimals?: number;
-  symbol?: string;
-  name?: string;
+  recipient: Address;
+  parsedAmount: bigint;
 };
 
 export type MintData = {
@@ -17,14 +16,14 @@ export type MintData = {
   keyId?: string;
 };
 
-export function useMint() {
+export function useTransfer() {
   const { execute } = useTransaction();
 
   const [isPending, setIsPending] = useState<boolean>(false);
   const [result, setResult] = useState<any | null>(null);
 
-  async function onMint(props: MintTokenProps) {
-    const { address } = props;
+  async function onSwap(props: TransferProps) {
+    const { address, recipient, parsedAmount } = props;
 
     setResult(null);
     setIsPending(true);
@@ -34,8 +33,8 @@ export function useMint() {
       to: address,
       data: encodeFunctionData({
         abi: MintableERC20ABI,
-        functionName: "mintOnce",
-        args: [],
+        functionName: "transfer",
+        args: [recipient, parsedAmount],
       }),
     });
 
@@ -47,9 +46,11 @@ export function useMint() {
     setIsPending(false);
     setResult(response);
 
-    console.log("mint-hook-response:: ", response);
+    console.log("transfer-hook-response:: ", response);
     return response;
   }
+
+  // 0x8F8faa9eBB54DEda91a62B4FC33550B19B9d33bf
 
   const isSuccess = useMemo(() => {
     return !!result?.success;
@@ -68,7 +69,7 @@ export function useMint() {
   }, [result?.data]);
 
   return {
-    onMint,
+    onTransfer,
     isPending,
     errorMessage,
     isSuccess,
