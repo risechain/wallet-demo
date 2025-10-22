@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { useUserPreference } from "@/context/UserPreference";
+import { useTransaction } from "@/hooks/useTransaction";
 import { Separator } from "@ui/separator";
 import {
   Sidebar,
@@ -20,6 +21,7 @@ import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
+import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 
 const demoItems = [
@@ -51,6 +53,8 @@ export function AppSidebar() {
   const { isSessionKeyEnabled, enableSessionKey } = useUserPreference();
 
   const [hasMounted, setHasMounted] = useState(false);
+
+  const { checkWalletKeys } = useTransaction();
 
   useEffect(() => {
     setHasMounted(true);
@@ -113,6 +117,27 @@ export function AppSidebar() {
                   checked={isSessionKeyEnabled}
                   onCheckedChange={enableSessionKey}
                 />
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <Separator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Debug</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="px-2 gap-4">
+              <SidebarMenuItem className="flex justify-between items-center">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => {
+                    checkWalletKeys();
+                  }}
+                >
+                  Check Wallet Keys
+                </Button>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

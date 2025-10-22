@@ -4,6 +4,7 @@ import { TOKENS, UNISWAP_CONTRACTS } from "@/config/tokens";
 import { P256, PublicKey, Value } from "ox";
 import { Hooks } from "porto/wagmi";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { keccak256, toHex } from "viem";
 import { useAccount } from "wagmi";
 
 export interface SessionKey {
@@ -29,8 +30,6 @@ export function useSessionKeys() {
 
   // Use Porto's built-in hooks - much simpler!
   const { data: permissions, isLoading: loading } = Hooks.usePermissions();
-
-  console.log("permissions:: ", permissions);
 
   const grantPermissions = Hooks.useGrantPermissions();
   const revokePermissions = Hooks.useRevokePermissions();
@@ -181,21 +180,34 @@ export function useSessionKeys() {
         feeToken: {
           limit: "1" as any,
           // symbol: "EXP",
+          symbol: "ETH",
         },
         permissions: {
           calls: [
             {
               to: TOKENS.MockUSD.address,
-              signature: "transfer(address,uint256)",
+              // signature: "transfer(address,uint256)",
+              selector: keccak256(toHex("transfer(address,uint256)")).slice(
+                0,
+                10
+              ),
             },
             {
               to: TOKENS.MockToken.address,
-              signature: "transfer(address,uint256)",
+              // signature: "transfer(address,uint256)",
+              selector: keccak256(toHex("transfer(address,uint256)")).slice(
+                0,
+                10
+              ),
             },
             {
               to: UNISWAP_CONTRACTS.router,
-              signature:
-                "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
+              // signature: "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
+              selector: keccak256(
+                toHex(
+                  "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)"
+                )
+              ).slice(0, 10),
             },
           ],
           spend: [
@@ -335,6 +347,10 @@ export function useSessionKeys() {
   const activeKeys = sessionKeys.filter(
     (key) => key.hasPrivateKey && key.expiry > Math.floor(Date.now() / 1000)
   ).length;
+
+  useEffect(() => {
+    console.log("use-session-keys permissions:: ", permissions);
+  }, [permissions]);
 
   return {
     keyPair,

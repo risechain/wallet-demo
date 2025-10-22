@@ -151,19 +151,6 @@ export function useTransaction() {
       console.log("session-digest:: ", digest);
       console.log("session-key:: ", key);
 
-      // For debugging only
-      const walletKeys = await provider.request({
-        method: "wallet_getKeys",
-        params: [
-          {
-            address,
-            chainIds: [Hex.fromNumber(chainId)],
-          },
-        ],
-      });
-
-      console.log("session-walletKeys:: ", walletKeys);
-
       return {
         success: true,
         error: null,
@@ -179,9 +166,26 @@ export function useTransaction() {
     }
   }
 
+  async function checkWalletKeys() {
+    // For debugging only
+    const provider = (await connector.getProvider()) as any;
+
+    const walletKeys = await provider.request({
+      method: "wallet_getKeys",
+      params: [
+        {
+          address,
+        },
+      ],
+    });
+
+    console.log("session-walletKeys:: ", walletKeys);
+  }
+
   return {
     execute,
     executeWithPasskey,
     executeWithSessionKey,
+    checkWalletKeys,
   };
 }
