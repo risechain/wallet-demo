@@ -44,9 +44,6 @@
     "wagmi": "^2.18.1",
     "zod": "^4.1.12"
   },
-  "overrides": {
-    "porto": "$porto"
-  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
