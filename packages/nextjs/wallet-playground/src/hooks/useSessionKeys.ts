@@ -2,8 +2,8 @@
 
 import { PERMISSIONS } from "@/config/permissions";
 import { P256, PublicKey } from "ox";
-import { Hooks } from "porto/wagmi";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Hooks } from "rise-wallet/wagmi";
 import { useAccount } from "wagmi";
 
 export interface SessionKey {

@@ -1,16 +1,16 @@
-import { porto } from "porto/wagmi";
-import { riseTestnet, riseTestnetConfig } from "rise-wallet";
+import { Chains, Porto } from "rise-wallet";
+import { porto } from "rise-wallet/wagmi";
 import { createClient, http } from "viem";
 import { createConfig } from "wagmi";
 
 // Export the porto connector instance for session key access
-export const portoConnector = porto(riseTestnetConfig);
+export const portoConnector = porto(Porto.defaultConfig);
 
 export const config = createConfig({
-  chains: [riseTestnet],
+  chains: [Chains.riseTestnet],
   connectors: [portoConnector],
   transports: {
-    [riseTestnet.id]: http("https://testnet.riselabs.xyz"),
+    [Chains.riseTestnet.id]: http("https://testnet.riselabs.xyz"),
   },
 });
 

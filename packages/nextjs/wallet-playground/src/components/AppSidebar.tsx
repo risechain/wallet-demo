@@ -126,7 +126,7 @@ export function AppSidebar() {
         <Separator />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Debug</SidebarGroupLabel>
+          <SidebarGroupLabel>CONSOLE LOGS</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="px-2 gap-1">
               <SidebarMenuItem className="flex justify-between items-center">

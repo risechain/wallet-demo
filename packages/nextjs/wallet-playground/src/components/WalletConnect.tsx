@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { config } from "@/config/wagmi";
 import { Separator } from "@ui/separator";
 import { Skeleton } from "@ui/skeleton";
-import { Actions } from "porto/wagmi";
 import { useEffect, useState } from "react";
+import { Actions } from "rise-wallet/wagmi";
 import { formatEther } from "viem";
 import { useAccount, useBalance, useConnect, useDisconnect } from "wagmi";
 
