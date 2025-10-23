@@ -1,8 +1,8 @@
 import { MintableERC20ABI } from "@/abi/erc20";
 import { UniswapV2RouterABI } from "@/abi/swap";
-import { UNISWAP_CONTRACTS } from "@/config/tokens";
+import { TokenConfig, UNISWAP_CONTRACTS } from "@/config/tokens";
 import { useMemo, useState } from "react";
-import { Address, encodeFunctionData, maxUint104 } from "viem";
+import { Address, encodeFunctionData, parseUnits } from "viem";
 import { TransactionCall, useTransaction } from "./useTransaction";
 
 export type SwapProps = {
@@ -14,11 +14,47 @@ export type SwapProps = {
   accountAddress: Address;
 };
 
+export type ApproveSwapProps = {
+  from: TokenConfig;
+};
+
 export function useSwap() {
   const { execute } = useTransaction();
 
   const [isPending, setIsPending] = useState<boolean>(false);
   const [result, setResult] = useState<any | null>(null);
+
+  async function onApprove(props: ApproveSwapProps) {
+    const { from } = props;
+
+    const maxAmount = parseUnits("1000000000", from.decimals);
+
+    setResult(null);
+    setIsPending(true);
+    const calls: TransactionCall[] = [];
+
+    calls.push({
+      to: from.address,
+      data: encodeFunctionData({
+        abi: MintableERC20ABI,
+        functionName: "approve",
+        args: [UNISWAP_CONTRACTS.router, maxAmount],
+      }),
+    });
+
+    const response = await execute({
+      calls,
+      requiredPermissions: {
+        calls: [from.address.toLowerCase()],
+      },
+    });
+
+    // setIsPending(false);
+    // setResult(response);
+
+    console.log("approve-hook-response:: ", response);
+    return response;
+  }
 
   async function onSwap(props: SwapProps) {
     const {
@@ -34,42 +70,25 @@ export function useSwap() {
     setIsPending(true);
     const calls: TransactionCall[] = [];
 
-    calls.push(
-      // Approve first -- TODO: add handling for allowance check here
-      // TODO: separate and use passkey temporarily
-      {
-        to: fromAddress,
-        data: encodeFunctionData({
-          abi: MintableERC20ABI,
-          functionName: "approve",
-          args: [UNISWAP_CONTRACTS.router, maxUint104],
-        }),
-      },
-
-      // Swap
-      {
-        to: UNISWAP_CONTRACTS.router,
-        data: encodeFunctionData({
-          abi: UniswapV2RouterABI,
-          functionName: "swapExactTokensForTokens",
-          args: [
-            amountIn,
-            amountOutMin,
-            [fromAddress, toAddress],
-            accountAddress,
-            deadline,
-          ],
-        }),
-      }
-    );
+    calls.push({
+      to: UNISWAP_CONTRACTS.router,
+      data: encodeFunctionData({
+        abi: UniswapV2RouterABI,
+        functionName: "swapExactTokensForTokens",
+        args: [
+          amountIn,
+          amountOutMin,
+          [fromAddress, toAddress],
+          accountAddress,
+          deadline,
+        ],
+      }),
+    });
 
     const response = await execute({
       calls,
       requiredPermissions: {
-        calls: [
-          fromAddress.toLowerCase(),
-          UNISWAP_CONTRACTS.router.toLowerCase(),
-        ],
+        calls: [UNISWAP_CONTRACTS.router.toLowerCase()],
       },
     });
 
@@ -106,6 +125,7 @@ export function useSwap() {
 
   return {
     onSwap,
+    onApprove,
     isPending,
     errorMessage,
     isSuccess,

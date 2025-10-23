@@ -1,3 +1,12 @@
+import { Address } from "viem";
+
+export type TokenConfig = {
+  address: Address;
+  decimals: number;
+  symbol: string;
+  name: string;
+};
+
 // Updated token addresses from degenRobot/devrel-trading-bot
 export const TOKENS = {
   MockUSD: {

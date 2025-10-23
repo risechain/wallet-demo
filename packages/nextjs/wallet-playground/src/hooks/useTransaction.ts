@@ -116,19 +116,9 @@ export function useTransaction() {
       const intentParams = [
         {
           calls,
-          capabilities: {
-            authorizeKeys: [
-              {
-                key: {
-                  publicKey: key.publicKey,
-                  type: "p256",
-                },
-                permissions: extractPermission(),
-              },
-            ],
-          },
           chainId: Hex.fromNumber(chainId),
           from: address,
+          atomicRequired: true,
           key: {
             publicKey: key.publicKey,
             type: "p256",

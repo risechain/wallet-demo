@@ -1,10 +1,11 @@
 "use client";
 
+import { MintableERC20ABI } from "@/abi/erc20";
 import { UniswapV2RouterABI } from "@/abi/swap";
 import { TOKENS, UNISWAP_CONTRACTS } from "@/config/tokens";
 import { useSwap } from "@/hooks/useSwap";
 import { ArrowDownUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { TransactionHeader } from "./TransactionHeader";
@@ -20,6 +21,7 @@ export function Swap() {
   const { address } = useAccount();
 
   const {
+    onApprove,
     onSwap,
     isPending: isSwapping,
     data: result,
@@ -49,6 +51,36 @@ export function Swap() {
     token: toConfig.address,
     query: { refetchInterval: 10000 },
   });
+
+  // Check allowance
+  const {
+    data: allowance,
+    refetch: refetchAllowance,
+    isLoading: isAllowanceLoading,
+    error: allowanceError,
+  } = useReadContract({
+    address: fromConfig.address,
+    abi: MintableERC20ABI,
+    functionName: "allowance",
+    args: [address, UNISWAP_CONTRACTS.router],
+    query: {
+      enabled: !!address,
+    },
+  });
+
+  const shouldApprove = useMemo(() => {
+    console.log("from:: ", fromConfig);
+    console.log("allowance:: ", allowance);
+
+    if (!fromAmount || Number.parseFloat(fromAmount) <= 0) return false;
+    if (allowance === undefined || allowance === null) return true;
+
+    const requiredAmount = parseUnits(fromAmount, fromConfig.decimals);
+
+    console.log("requiredAmount:: ", requiredAmount);
+    console.log("shouldApprove:: ", allowance < requiredAmount);
+    return allowance < requiredAmount;
+  }, [allowance]);
 
   // Parse amount for quote
   const amountInBigInt = (() => {
@@ -91,6 +123,7 @@ export function Swap() {
     },
   });
 
+  // TODO: Clean this
   // Update quote amount
   useEffect(() => {
     if (quoteData && Array.isArray(quoteData) && quoteData.length >= 2) {
@@ -139,6 +172,18 @@ export function Swap() {
       return;
     }
 
+    // If needs approval
+    if (shouldApprove) {
+      const response = await onApprove({
+        from: fromConfig,
+      });
+
+      if (response.success) {
+        refetchAllowance();
+      }
+      console.log("approval-response:: ", response);
+    }
+
     const response = await onSwap({
       accountAddress: address,
       amountIn,
@@ -169,7 +214,12 @@ export function Swap() {
     }
   };
 
-  const isDisabled = !fromAmount || !toAmount || !!error;
+  const isDisabled =
+    isAllowanceLoading ||
+    !fromAmount ||
+    !toAmount ||
+    !!error ||
+    !!allowanceError;
 
   return (
     <Card>
