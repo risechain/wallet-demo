@@ -52,7 +52,7 @@ export function Mint() {
       }
       return isSuccess;
     },
-    [isSuccess]
+    [isSuccess, hasMinted]
   );
 
   const handleMint = async (address: Address) => {
