@@ -22,6 +22,7 @@ export function useSwap() {
   const { execute } = useTransaction();
 
   const [isPending, setIsPending] = useState<boolean>(false);
+  const [isApproved, setIsApproved] = useState<boolean>(false);
   const [result, setResult] = useState<any | null>(null);
 
   async function onApprove(props: ApproveSwapProps) {
@@ -30,6 +31,7 @@ export function useSwap() {
     const maxAmount = parseUnits("1000000000", from.decimals);
 
     setResult(null);
+    setIsApproved(false);
     setIsPending(true);
     const calls: TransactionCall[] = [];
 
@@ -49,8 +51,12 @@ export function useSwap() {
       },
     });
 
-    // setIsPending(false);
-    // setResult(response);
+    if (response.success) {
+      setIsApproved(true);
+    }
+
+    setIsPending(false);
+    setResult(response);
 
     console.log("approve-hook-response:: ", response);
     return response;
@@ -132,5 +138,6 @@ export function useSwap() {
     error,
     data,
     reset,
+    isApproved,
   };
 }
