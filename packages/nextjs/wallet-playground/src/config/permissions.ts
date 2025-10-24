@@ -20,11 +20,11 @@ export const CALLS = [
   },
   {
     to: TOKENS.MockToken.address,
-    signature: keccak256(toHex("mintOnce")).slice(0, 10),
+    signature: keccak256(toHex("mintOnce()")).slice(0, 10),
   },
   {
     to: TOKENS.MockUSD.address,
-    signature: keccak256(toHex("mintOnce")).slice(0, 10),
+    signature: keccak256(toHex("mintOnce()")).slice(0, 10),
   },
   {
     to: UNISWAP_CONTRACTS.router,
