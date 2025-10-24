@@ -100,8 +100,8 @@ export function Mint() {
       <TransactionResult
         isSuccess={isMintSuccess}
         isSessionKey={result?.usedSessionKey}
-        transactionHash={result?.hash}
-        transactionAddr={result?.keyId}
+        transactionHash={result?.id}
+        transactionAddr={result?.id}
         errorMessage={errorMessage}
       />
     </div>
