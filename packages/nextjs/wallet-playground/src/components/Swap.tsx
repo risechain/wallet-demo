@@ -21,7 +21,6 @@ export function Swap() {
   const { address } = useAccount();
 
   const {
-    onApprove,
     isApproved,
     onSwap,
     isPending: isSwapping,
@@ -79,7 +78,8 @@ export function Swap() {
     const requiredAmount = parseUnits(fromAmount, fromConfig.decimals);
 
     console.log("requiredAmount:: ", requiredAmount);
-    console.log("shouldApprove:: ", allowance < requiredAmount);
+    console.log("shouldApprove-allowance:: ", allowance < requiredAmount);
+    console.log("-------------------------");
     return allowance < requiredAmount;
   }, [allowance, toAmount, isApproved]);
 
@@ -158,27 +158,6 @@ export function Swap() {
     toConfig.decimals,
   ]);
 
-  const handleApprove = async () => {
-    reset(); // TODO debounce this
-
-    const amountIn = parseUnits(fromAmount, fromConfig.decimals);
-
-    // TODO: Add no quote available check
-    if (fromBalance && amountIn > fromBalance.value) {
-      setError("Insufficient balance");
-      return;
-    }
-
-    const response = await onApprove({
-      from: fromConfig,
-    });
-
-    if (response.success) {
-      refetchAllowance();
-    }
-    console.log("approval-response:: ", response);
-  };
-
   const handleSwap = async () => {
     reset(); // TODO debounce this
 
@@ -198,14 +177,16 @@ export function Swap() {
       accountAddress: address,
       amountIn,
       amountOutMin,
-      fromAddress: fromConfig.address,
+      from: fromConfig,
       toAddress: toConfig.address,
       deadline,
+      shouldApprove,
     });
 
     if (response.success) {
       refetchToBalance();
       refetchFromBalance();
+      refetchAllowance();
     }
   };
 
@@ -225,10 +206,10 @@ export function Swap() {
   };
 
   const isDisabled =
-    isAllowanceLoading ||
     !fromAmount ||
     !toAmount ||
     !!error ||
+    isAllowanceLoading ||
     !!allowanceError;
 
   return (
@@ -321,27 +302,16 @@ export function Swap() {
         </div>
 
         {/* Action Button */}
-        {shouldApprove && toAmount && (
-          <Button
-            onClick={handleApprove}
-            disabled={isAllowanceLoading || !!allowanceError}
-            className="w-full text-lg bg-warning hover:bg-warning/75"
-            size="xl"
-          >
-            {isSwapping ? <Spinner className="stroke-invert" /> : "Approve"}
-          </Button>
-        )}
-
-        {((!shouldApprove && toAmount) || !toAmount) && (
-          <Button
-            onClick={handleSwap}
-            disabled={isSwapping || isDisabled}
-            className="w-full text-lg"
-            size="xl"
-          >
-            {isSwapping ? <Spinner className="stroke-invert" /> : "Swap"}
-          </Button>
-        )}
+        <Button
+          onClick={handleSwap}
+          disabled={isSwapping || isDisabled}
+          className="w-full text-lg"
+          size="xl"
+        >
+          {isSwapping && <Spinner className="stroke-invert" />}
+          {!isSwapping && shouldApprove && "Approve and Swap"}
+          {!isSwapping && !shouldApprove && "Swap"}
+        </Button>
 
         <TransactionResult
           isSuccess={isSuccess}

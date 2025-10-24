@@ -8,10 +8,11 @@ import { TransactionCall, useTransaction } from "./useTransaction";
 export type SwapProps = {
   amountIn: bigint;
   amountOutMin: bigint;
-  fromAddress: Address;
   toAddress: Address;
   deadline: bigint;
   accountAddress: Address;
+  from: TokenConfig;
+  shouldApprove?: boolean;
 };
 
 export type ApproveSwapProps = {
@@ -28,7 +29,8 @@ export function useSwap() {
   async function onApprove(props: ApproveSwapProps) {
     const { from } = props;
 
-    const maxAmount = parseUnits("1000000000", from.decimals);
+    // TOOD: Let the user know that the spending limit is just 50
+    const maxAmount = parseUnits("50", from.decimals);
 
     setResult(null);
     setIsApproved(false);
@@ -67,14 +69,29 @@ export function useSwap() {
       accountAddress,
       amountIn,
       amountOutMin,
-      fromAddress,
+      from,
       toAddress,
       deadline,
+      shouldApprove,
     } = props;
 
     setResult(null);
     setIsPending(true);
     const calls: TransactionCall[] = [];
+
+    // TOOD: Let the user know that the spending limit is just 50
+    const maxAmount = parseUnits("50", from.decimals);
+
+    if (shouldApprove) {
+      calls.push({
+        to: from.address,
+        data: encodeFunctionData({
+          abi: MintableERC20ABI,
+          functionName: "approve",
+          args: [UNISWAP_CONTRACTS.router, maxAmount],
+        }),
+      });
+    }
 
     calls.push({
       to: UNISWAP_CONTRACTS.router,
@@ -84,7 +101,7 @@ export function useSwap() {
         args: [
           amountIn,
           amountOutMin,
-          [fromAddress, toAddress],
+          [from.address, toAddress],
           accountAddress,
           deadline,
         ],

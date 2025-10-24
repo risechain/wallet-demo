@@ -9,9 +9,7 @@ export function TransactionHeader(props: Readonly<HeaderProps>) {
   const { label } = props;
 
   const { isSessionKeyEnabled } = useUserPreference();
-  const { getUsableSessionKey } = useSessionKeys();
-
-  const usableSessionKey = getUsableSessionKey();
+  const { hasSessionKey: usableSessionKey } = useSessionKeys();
 
   return (
     <div className="flex gap-2 justify-between items-center">
