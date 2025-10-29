@@ -1,0 +1,116 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@import "../styles/base/index.css";
+@import "../styles/keyframes.css";
+
+@plugin "@tailwindcss/container-queries";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --animate-fade-in: fade-in 400ms ease-out;
+  --animate-fade-out: fade-out 400ms ease-out;
+  --animate-slide-in: slide-in 200ms ease-out;
+  --animate-slide-out: slide-out 200ms ease-out;
+  --animate-slide-up: slide-up 200ms ease-out;
+  --animate-slide-down: slide-down 200ms ease-out;
+  --animate-accordion-down: accordion-down 200ms ease-out;
+  --animate-accordion-up: accordion-up 200ms ease-out;
+  --animate-collapsible-down: collapsible-down 200ms ease-out;
+  --animate-collapsible-up: collapsible-up 200ms ease-out;
+
+  --color-accent: var(--gray-3);
+  --color-accent-foreground: var(--gray-12);
+
+  --color-background: var(--gray-1);
+  --color-foreground: var(--gray-12);
+
+  --color-invert: var(--gray-contrast);
+
+  --color-primary: var(--purple-9);
+  --color-primary-foreground: var(--purple-contrast);
+
+  --color-secondary: var(--gray-4);
+  --color-secondary-foreground: var(--gray-12);
+
+  --color-border: var(--gray-6);
+  --color-input: var(--gray-6);
+
+  --color-card: var(--gray-1);
+  --color-card-foreground: var(--gray-surface);
+
+  --color-destructive: #d4183d;
+  --color-destructive-foreground: var(--gray-1);
+
+  --color-warning: #ffaa00;
+  --color-warning-foreground: var(--gray-1);
+
+  --color-success: #009933;
+  --color-success-foreground: var(--gray-1);
+
+  --color-muted: var(--gray-6);
+  --color-muted-foreground: var(--gray-9);
+
+  --color-popover: var(--gray-1);
+  --color-popover-foreground: var(--gray-surface);
+
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--gray-1);
+  --color-sidebar-accent: var(--purple-9);
+  --color-sidebar-accent-foreground: var(--gray-1);
+  --color-sidebar-border: var(--gray-6);
+  --color-sidebar-foreground: var(--gray-12);
+  --color-sidebar-primary: var(--purple-9);
+  --color-sidebar-primary-foreground: var(--gray-1);
+  --color-sidebar-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-xs: calc(var(--radius) - 6px);
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    overflow-y: scroll;
+  }
+
+  p,
+  * {
+    color: var(--color-foreground);
+  }
+
+  /* Global Scrollbar Styles */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-accent);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 32px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-foreground);
+  }
+}
