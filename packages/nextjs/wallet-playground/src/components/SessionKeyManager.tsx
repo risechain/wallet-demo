@@ -1,10 +1,12 @@
 "use client";
 
 import { useSessionKeys } from "@/hooks/useSessionKeys";
+import { useTransaction } from "@/hooks/useTransaction";
 import { cn } from "@/lib/utils";
+import { isEmpty } from "lodash";
 import { Info } from "lucide-react";
 import pluralize from "pluralize-esm";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CopyableAddress } from "./CopyableAddress";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -40,7 +42,24 @@ export function SessionKeyManager() {
   const [error, setError] = useState("");
   const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
 
+  const [ethAccounts, setEthAccounts] = useState([]);
+  const { getEthAccounts } = useTransaction();
+
+  useEffect(() => {
+    const initialize = async () => {
+      const accounts = await getEthAccounts();
+      console.log("Disconnected Error - No Accounts:", isEmpty(accounts));
+      setEthAccounts(accounts);
+    };
+
+    initialize();
+  }, []);
+
   const handleCreateKey = async () => {
+    if (ethAccounts.length === 0) {
+      setError("Sync Issue: No ETH Accounts found. Reconnect your wallet!");
+    }
+
     try {
       setError("");
       const result = await createSessionKey();

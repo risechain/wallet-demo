@@ -309,10 +309,6 @@ export function useSessionKeys() {
     (key) => key.hasPrivateKey && key.expiry > Math.floor(Date.now() / 1000)
   ).length;
 
-  useEffect(() => {
-    console.log("use-session-keys permissions:: ", permissions);
-  }, [permissions]);
-
   return {
     keyPair,
     sessionKeys,

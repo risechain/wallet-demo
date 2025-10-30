@@ -112,6 +112,9 @@ export function useTransaction() {
   async function executeWithSessionKey(calls: TransactionCall[]) {
     console.log("executing using sessionkey....");
     try {
+      // Use the connector from the hook state
+      if (!connector) throw new Error("No connector available");
+
       const provider = (await connector.getProvider()) as any;
 
       const intentParams = [
@@ -181,6 +184,21 @@ export function useTransaction() {
         data: null,
       };
     }
+  }
+
+  async function getEthAccounts() {
+    // For debugging only
+    if (!connector) throw new Error("No connector available");
+
+    const provider = (await connector.getProvider()) as any;
+
+    const accounts = await provider.request({
+      method: "eth_accounts",
+    });
+
+    console.log("eth_accounts:: ", accounts);
+
+    return accounts;
   }
 
   async function getWalletKeys() {
@@ -254,5 +272,6 @@ export function useTransaction() {
     getCapabilities,
     getPermissions,
     extractPermission,
+    getEthAccounts,
   };
 }

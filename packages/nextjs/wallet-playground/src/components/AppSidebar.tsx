@@ -54,8 +54,13 @@ export function AppSidebar() {
 
   const [hasMounted, setHasMounted] = useState(false);
 
-  const { getWalletKeys, getCapabilities, getPermissions, extractPermission } =
-    useTransaction();
+  const {
+    getEthAccounts,
+    getWalletKeys,
+    getCapabilities,
+    getPermissions,
+    extractPermission,
+  } = useTransaction();
 
   useEffect(() => {
     setHasMounted(true);
@@ -125,10 +130,21 @@ export function AppSidebar() {
 
         <Separator />
 
-        <SidebarGroup>
+        <SidebarGroup className="hidden">
           <SidebarGroupLabel>CONSOLE LOGS</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="px-2 gap-1">
+              <SidebarMenuItem className="flex justify-between items-center">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => {
+                    getEthAccounts();
+                  }}
+                >
+                  Get Accounts
+                </Button>
+              </SidebarMenuItem>
               <SidebarMenuItem className="flex justify-between items-center">
                 <Button
                   className="w-full"
