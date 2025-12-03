@@ -99,12 +99,9 @@ export function useTransaction() {
         version: "1",
       } as any);
 
-      const hash = await provider.request({
-        method: "wallet_getCallsStatus",
-        params: [result.id],
-      });
-
-      const id = hash.receipts[0].transactionHash;
+      const id = result.id
+        ? await getTransactionHash(result.id as Address, provider)
+        : "";
 
       return {
         success: true,
@@ -169,12 +166,10 @@ export function useTransaction() {
         ],
       });
 
-      const hash = await provider.request({
-        method: "wallet_getCallsStatus",
-        params: [result[0].id],
-      });
-
-      const id = hash.receipts[0].transactionHash;
+      const id =
+        result.length === 0
+          ? ""
+          : await getTransactionHash(result[0].id, provider);
 
       let resp = result;
 
@@ -202,6 +197,20 @@ export function useTransaction() {
         data: null,
       };
     }
+  }
+
+  async function getTransactionHash(id: Address, provider: any) {
+    // Use the connector from the hook state
+    const hash = await provider.request({
+      method: "wallet_getCallsStatus",
+      params: [id],
+    });
+
+    if (hash.receipts.length !== 0) {
+      return hash.receipts[0].transactionHash;
+    }
+
+    return "";
   }
 
   async function getEthAccounts() {
