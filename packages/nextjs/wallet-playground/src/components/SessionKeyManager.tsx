@@ -48,7 +48,9 @@ export function SessionKeyManager() {
   useEffect(() => {
     const initialize = async () => {
       const accounts = await getEthAccounts();
-      console.log("Disconnected Error - No Accounts:", isEmpty(accounts));
+      if (isEmpty(accounts)) {
+        console.log("Disconnected Error - No Accounts:", isEmpty(accounts));
+      }
       setEthAccounts(accounts);
     };
 

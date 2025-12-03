@@ -86,6 +86,12 @@ export function useTransaction() {
 
   async function executeWithPasskey(calls: TransactionCall[]) {
     console.log("executing using passkey....");
+
+    // Use the connector from the hook state
+    if (!connector) throw new Error("No connector available");
+
+    const provider = (await connector.getProvider()) as any;
+
     try {
       // TODO: Fix type instantation issue - wagmi
       const result = await sendCallsAsync({
@@ -93,10 +99,17 @@ export function useTransaction() {
         version: "1",
       } as any);
 
+      const hash = await provider.request({
+        method: "wallet_getCallsStatus",
+        params: [result.id],
+      });
+
+      const id = hash.receipts[0].transactionHash;
+
       return {
         success: true,
         error: null,
-        data: { ...result, usedSessionKey: false },
+        data: { ...result, id, usedSessionKey: false },
       };
     } catch (error) {
       console.log("execute-with-passkey-error: ", error);
@@ -136,8 +149,6 @@ export function useTransaction() {
         params: intentParams,
       });
 
-      console.log("intentParams:: ", intentParams);
-
       // Sign the intent
       const signature = Signature.toHex(
         P256.sign({
@@ -158,6 +169,13 @@ export function useTransaction() {
         ],
       });
 
+      const hash = await provider.request({
+        method: "wallet_getCallsStatus",
+        params: [result[0].id],
+      });
+
+      const id = hash.receipts[0].transactionHash;
+
       let resp = result;
 
       if (isArray(result) && result.length !== 0) {
@@ -174,7 +192,7 @@ export function useTransaction() {
       return {
         success: true,
         error: null,
-        data: { ...resp, usedSessionKey: true },
+        data: { ...resp, id, usedSessionKey: true },
       };
     } catch (error) {
       console.log("execute-with-sessionkey-error:: ", error);
