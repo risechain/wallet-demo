@@ -8,7 +8,7 @@ export type ConnectInfoProps = {
 export function ConnectInfo({ label }: Readonly<ConnectInfoProps>) {
   const { connect, isPending, connectors } = useConnect();
 
-  const portoConnector = connectors.find((c) => c.id === "xyz.ithaca.porto");
+  const portoConnector = connectors.find((c) => c.id === "com.risechain.wallet");
 
   return (
     <div className="text-center space-y-4">

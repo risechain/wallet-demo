@@ -22,7 +22,7 @@ export function WalletConnect() {
     setMounted(true);
   }, []);
 
-  const portoConnector = connectors.find((c) => c.id === "xyz.ithaca.porto");
+  const portoConnector = connectors.find((c) => c.id === "com.risechain.wallet");
 
   if (!mounted) {
     return <Skeleton className="w-40 h-8" />;
