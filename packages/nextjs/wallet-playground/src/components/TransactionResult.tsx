@@ -22,7 +22,6 @@ export function TransactionResult(props: Readonly<ResultProps>) {
     errorMessage,
     isWarning,
     warningMessage,
-    keyId,
   } = props;
 
   return (
@@ -73,18 +72,6 @@ export function TransactionResult(props: Readonly<ResultProps>) {
             <Check size={16} />
             <span className="text-sm text-success">Transaction confirmed</span>
           </div>
-
-          {/* {isSessionKey && transactionHash && (
-            <div className="text-green-400 text-xs mt-1 flex items-center">
-              Used key:
-              <CopyableAddress
-                address={keyId}
-                prefix={6}
-                suffix={6}
-                className="text-success ml-1"
-              />
-            </div>
-          )} */}
         </div>
       )}
 

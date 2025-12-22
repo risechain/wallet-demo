@@ -30,9 +30,6 @@ export function Swap() {
     reset,
   } = useSwap();
 
-  console.log("errorMessage:: ", errorMessage);
-  console.log("result:: ", result);
-
   const [fromToken, setFromToken] = useState<TokenSymbol>("MockUSD");
   const [toToken, setToToken] = useState<TokenSymbol>("MockToken");
   const [fromAmount, setFromAmount] = useState("");

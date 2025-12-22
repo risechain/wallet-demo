@@ -225,12 +225,6 @@ export function useTransaction() {
       params: [id],
     });
 
-    console.log("hash:: ", hash);
-
-    // if (hash.receipts.length !== 0) {
-    //   return hash.receipts[0].transactionHash;
-    // }
-
     return hash;
   }
 
