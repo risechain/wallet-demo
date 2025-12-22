@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["dom", "dom.iterable", "esnext", "ES2020"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext",
+      "ES2020"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": false,
@@ -11,7 +16,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "allowImportingTsExtensions": true,
     "noErrorTruncation": true,
@@ -21,15 +26,37 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@layout/*": ["./src/app/_layout/*"],
-      "@components/*": ["./src/components/*"],
-      "@ui/*": ["./src/components/ui/*"],
-      "@hooks/*": ["./src/hooks/*"],
-      "@lib/*": ["./src/lib/*"],
-      "@styles/*": ["./src/styles/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@layout/*": [
+        "./src/app/_layout/*"
+      ],
+      "@components/*": [
+        "./src/components/*"
+      ],
+      "@ui/*": [
+        "./src/components/ui/*"
+      ],
+      "@hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@lib/*": [
+        "./src/lib/*"
+      ],
+      "@styles/*": [
+        "./src/styles/*"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
