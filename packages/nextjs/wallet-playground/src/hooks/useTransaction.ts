@@ -108,13 +108,13 @@ export function useTransaction() {
         return {
           success: false,
           error: { message: hash.status },
-          data: { ...result, id, usedSessionKey: true },
+          data: { ...result, id, usedSessionKey: false },
         };
       } else {
         return {
           success: true,
           error: null,
-          data: { ...result, id, usedSessionKey: true },
+          data: { ...result, id, usedSessionKey: false },
         };
       }
     } catch (error) {
