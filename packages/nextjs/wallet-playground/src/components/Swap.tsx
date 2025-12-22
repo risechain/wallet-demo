@@ -196,6 +196,7 @@ export function Swap() {
     setFromAmount("");
     setToAmount("");
     setError("");
+    reset();
   };
 
   const handleMaxClick = () => {
@@ -247,6 +248,7 @@ export function Swap() {
                   onChange={(e) => {
                     setFromAmount(e.target.value);
                     setError("");
+                    reset();
                   }}
                 />
                 <p className="text-sm text-muted-foreground font-semibold">

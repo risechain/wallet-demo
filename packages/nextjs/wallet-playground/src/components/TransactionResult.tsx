@@ -22,7 +22,6 @@ export function TransactionResult(props: Readonly<ResultProps>) {
     errorMessage,
     isWarning,
     warningMessage,
-    keyId,
   } = props;
 
   return (
@@ -73,24 +72,30 @@ export function TransactionResult(props: Readonly<ResultProps>) {
             <Check size={16} />
             <span className="text-sm text-success">Transaction confirmed</span>
           </div>
-
-          {/* {isSessionKey && transactionHash && (
-            <div className="text-green-400 text-xs mt-1 flex items-center">
-              Used key:
-              <CopyableAddress
-                address={keyId}
-                prefix={6}
-                suffix={6}
-                className="text-success ml-1"
-              />
-            </div>
-          )} */}
         </div>
       )}
 
       {errorMessage && (
         <div className="p-4 bg-destructive/5 rounded-md max-w-xl break-all max-h-72 overflow-auto">
           <p className="text-sm text-destructive">{errorMessage}</p>
+
+          {transactionHash && (
+            <div className="flex items-center gap-1">
+              <Link
+                href={`https://explorer.testnet.riselabs.xyz/tx/${transactionHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View on explorer"
+              >
+                <CopyableAddress
+                  address={transactionHash || ""}
+                  prefix={8}
+                  suffix={6}
+                  className="underline"
+                />
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </>

@@ -63,7 +63,6 @@ export function useTransaction() {
         if (isPermitted) {
           // Session key lacks required permissions, fall back to passkey
           const result = await executeWithSessionKey(calls);
-
           return {
             error: null,
             ...result,
@@ -99,15 +98,25 @@ export function useTransaction() {
         version: "1",
       } as any);
 
-      const id = result.id
+      const hash = result.id
         ? await getTransactionHash(result.id as Address, provider)
         : "";
 
-      return {
-        success: true,
-        error: null,
-        data: { ...result, id, usedSessionKey: false },
-      };
+      // TODO: percept status 500 only?
+      const id = hash.receipts[0].transactionHash;
+      if (hash.status === 500) {
+        return {
+          success: false,
+          error: { message: hash.status },
+          data: { ...result, id, usedSessionKey: false },
+        };
+      } else {
+        return {
+          success: true,
+          error: null,
+          data: { ...result, id, usedSessionKey: false },
+        };
+      }
     } catch (error) {
       console.log("execute-with-passkey-error: ", error);
 
@@ -166,7 +175,7 @@ export function useTransaction() {
         ],
       });
 
-      const id =
+      const hash =
         result.length === 0
           ? ""
           : await getTransactionHash(result[0].id, provider);
@@ -184,11 +193,21 @@ export function useTransaction() {
       console.log("session-digest:: ", digest);
       console.log("session-key:: ", key);
 
-      return {
-        success: true,
-        error: null,
-        data: { ...resp, id, usedSessionKey: true },
-      };
+      // TODO: percept status 500 only?
+      const id = hash.receipts[0].transactionHash;
+      if (hash.status === 500) {
+        return {
+          success: false,
+          error: { message: `Transaction Failed!: Status ${hash.status}` },
+          data: { ...result, id, usedSessionKey: true },
+        };
+      } else {
+        return {
+          success: true,
+          error: null,
+          data: { ...result, id, usedSessionKey: true },
+        };
+      }
     } catch (error) {
       console.log("execute-with-sessionkey-error:: ", error);
       return {
@@ -206,11 +225,7 @@ export function useTransaction() {
       params: [id],
     });
 
-    if (hash.receipts.length !== 0) {
-      return hash.receipts[0].transactionHash;
-    }
-
-    return "";
+    return hash;
   }
 
   async function getEthAccounts() {

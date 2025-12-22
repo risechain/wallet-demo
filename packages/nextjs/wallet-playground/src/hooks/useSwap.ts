@@ -79,8 +79,10 @@ export function useSwap() {
     setIsPending(true);
     const calls: TransactionCall[] = [];
 
+    console.log("amountIn:: ", amountIn);
+
     // TOOD: Let the user know that the spending limit is just 50
-    const maxAmount = parseUnits("50", from.decimals);
+    // const maxAmount = parseUnits("50", from.decimals);
 
     if (shouldApprove) {
       calls.push({
@@ -88,7 +90,7 @@ export function useSwap() {
         data: encodeFunctionData({
           abi: MintableERC20ABI,
           functionName: "approve",
-          args: [UNISWAP_CONTRACTS.router, maxAmount],
+          args: [UNISWAP_CONTRACTS.router, amountIn],
         }),
       });
     }
@@ -136,7 +138,7 @@ export function useSwap() {
       result?.error?.cause?.shortMessage ??
       result?.error?.message
     );
-  }, [result?.error]);
+  }, [result?.error, isSuccess]);
 
   const data = useMemo(() => {
     return result?.data;
