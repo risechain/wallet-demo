@@ -138,7 +138,7 @@ export function useSwap() {
       result?.error?.cause?.shortMessage ??
       result?.error?.message
     );
-  }, [result?.error]);
+  }, [result?.error, isSuccess]);
 
   const data = useMemo(() => {
     return result?.data;

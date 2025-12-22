@@ -63,7 +63,6 @@ export function useTransaction() {
         if (isPermitted) {
           // Session key lacks required permissions, fall back to passkey
           const result = await executeWithSessionKey(calls);
-
           return {
             error: null,
             ...result,
@@ -108,6 +107,7 @@ export function useTransaction() {
       if (hash.status === 500) {
         return {
           success: false,
+          error: { message: hash.status },
           data: { ...result, id, usedSessionKey: true },
         };
       } else {
@@ -198,13 +198,14 @@ export function useTransaction() {
       if (hash.status === 500) {
         return {
           success: false,
-          data: { ...resp, id, usedSessionKey: true },
+          error: { message: `Transaction Failed!: Status ${hash.status}` },
+          data: { ...result, id, usedSessionKey: true },
         };
       } else {
         return {
           success: true,
           error: null,
-          data: { ...resp, id, usedSessionKey: true },
+          data: { ...result, id, usedSessionKey: true },
         };
       }
     } catch (error) {
