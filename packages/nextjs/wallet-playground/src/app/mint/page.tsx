@@ -25,10 +25,6 @@ export default function MintPage() {
         <TransactionHeader label="Mint Test Tokens" />
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-muted-foreground text-sm">
-          Mint MockUSD and MockToken for testing. Each address can mint{" "}
-          <span className="font-bold">1,000</span> per token.
-        </p>
         <Mint />
       </CardContent>
     </Card>

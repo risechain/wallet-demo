@@ -142,12 +142,23 @@ export const SUPPORTED_ASSETS: SupportedAsset[] = [
     name: TOKENS.MockToken.name,
     type: "swap",
   },
+];
+
+export const SUPPORTED_BRIDGE_ASSETS: SupportedAsset[] = [
   // Bridge tokens on Rise Testnet
-  ...BRIDGE_TOKENS[riseTestnet.id].map((token) => ({
-    address: token.address,
-    decimals: token.decimals,
-    symbol: token.symbol,
-    name: token.name,
-    type: "bridge" as const,
-  })),
+  // fix this
+  {
+    address: "0x28Cd50d58f80Da33B16542cdF8ce59717F66b957" as `0x${string}`,
+    decimals: 18,
+    name: "USDC",
+    symbol: "USDC",
+    type: "bridge",
+  },
+  {
+    address: "0x9Fe63D450edC97D700fA1D0081b84569102e5C1D" as `0x${string}`,
+    decimals: 18,
+    name: "USDT",
+    symbol: "USDT",
+    type: "bridge",
+  },
 ];

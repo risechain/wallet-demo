@@ -26,7 +26,7 @@ export function useMint() {
       if (!connector) throw new Error("No connector available");
 
       const provider = (await connector.getProvider()) as any;
-
+      // "0x28cd50d58f80da33b16542cdf8ce59717f66b957";
       const { id } = await provider.request({
         method: "wallet_sendCalls",
         params: [
