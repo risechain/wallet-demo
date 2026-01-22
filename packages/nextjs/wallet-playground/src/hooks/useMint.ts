@@ -80,8 +80,8 @@ export function useMint() {
   }, [result?.error]);
 
   const errorMessage = useMemo(() => {
-    return result.status === 200 ? "" : `Error with status: ${result.status}`;
-  }, [result.status]);
+    return result.status === 200 ? "" : `Error with status: ${result?.status}`;
+  }, [result?.status]);
 
   const data = useMemo(() => {
     return result;
