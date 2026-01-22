@@ -1,51 +1,78 @@
-import { MintableERC20ABI } from "@/abi/erc20";
+import { ErrorFormatter } from "@/lib/utils";
+import type { Address } from "ox";
+import { Value } from "ox";
 import { useMemo, useState } from "react";
-import { Address, encodeFunctionData } from "viem";
-import { TransactionCall, useTransaction } from "./useTransaction";
+import { encodeFunctionData, parseAbiItem } from "viem";
+import { useAccount } from "wagmi";
 
-export type MintTokenProps = {
-  address: Address;
-  decimals?: number;
-  symbol?: string;
-  name?: string;
+export type UseMintTokenParams = {
+  address: Address.Address;
+  tokenAddress?: Address.Address;
+  chainId?: number;
 };
 
 export function useMint() {
-  const { execute } = useTransaction();
-
-  const [isPending, setIsPending] = useState<boolean>(false);
+  const [isPending, setIsPending] = useState(false);
   const [result, setResult] = useState<any | null>(null);
 
-  async function onMint(props: MintTokenProps) {
-    const { address } = props;
+  const { connector } = useAccount();
 
-    setResult(null);
+  const onMint = async (params: UseMintTokenParams) => {
+    const { address, chainId, tokenAddress } = params;
+    if (!tokenAddress || !chainId) return;
     setIsPending(true);
-    const calls: TransactionCall[] = [];
 
-    calls.push({
-      to: address,
-      data: encodeFunctionData({
-        abi: MintableERC20ABI,
-        functionName: "mintOnce",
-        args: [],
-      }),
-    });
+    try {
+      if (!connector) throw new Error("No connector available");
 
-    const response = await execute({
-      calls,
-      requiredPermissions: { calls: [address.toLowerCase()] },
-    });
+      const provider = (await connector.getProvider()) as any;
 
-    setIsPending(false);
-    setResult(response);
+      const { id } = await provider.request({
+        method: "wallet_sendCalls",
+        params: [
+          {
+            calls: [
+              {
+                data: encodeFunctionData({
+                  abi: [
+                    parseAbiItem("function mint(address to, uint256 amount)"),
+                  ],
+                  args: [address, Value.from("100", 18)],
+                  functionName: "mint",
+                }),
+                to: tokenAddress,
+              },
+            ],
+            chainId: `0x${chainId.toString(16)}`,
+          },
+        ],
+      });
 
-    console.log("mint-hook-response:: ", response);
-    return response;
-  }
+      const status = await provider.request({
+        method: "wallet_getCallsStatus",
+        params: [id],
+      });
+
+      console.log("mint call:", status);
+
+      setResult(status);
+      return status;
+    } catch (e) {
+      const error = e as Error;
+      const message =
+        typeof error.cause === "string" ? error.cause : error.message;
+
+      console.log(
+        "mint error message:: ",
+        ErrorFormatter.extractMessage(message),
+      );
+    } finally {
+      setIsPending(false);
+    }
+  };
 
   const isSuccess = useMemo(() => {
-    return !!result?.success;
+    return result?.status === 200;
   }, [result?.success]);
 
   const error = useMemo(() => {
@@ -53,23 +80,12 @@ export function useMint() {
   }, [result?.error]);
 
   const errorMessage = useMemo(() => {
-    return (
-      result?.error?.shortMessage ??
-      result?.error?.cause?.shortMessage ??
-      result?.error?.message
-    );
-  }, [result?.error]);
+    return result.status === 200 ? "" : `Error with status: ${result.status}`;
+  }, [result.status]);
 
   const data = useMemo(() => {
-    return result?.data;
-  }, [result?.data]);
+    return result;
+  }, [result]);
 
-  return {
-    onMint,
-    isPending,
-    errorMessage,
-    isSuccess,
-    error,
-    data,
-  };
+  return { isPending, errorMessage, isSuccess, error, data, onMint };
 }

@@ -16,7 +16,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@ui/sidebar";
-import { ArrowLeftRight, Coins, Key, Send } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Route as BridgeIcon,
+  Coins,
+  Key,
+  Send,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -34,6 +40,11 @@ const demoItems = [
     title: "Swap",
     url: "/swap",
     icon: ArrowLeftRight,
+  },
+  {
+    title: "Bridge",
+    url: "/bridge",
+    icon: BridgeIcon,
   },
   {
     title: "Mint",

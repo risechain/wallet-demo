@@ -98,7 +98,7 @@ export function Transfer() {
               <ChevronDown />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end">
+          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
             {Object.entries(TOKENS).map(([symbol, tokenInfo]) => (
               <DropdownMenuItem
                 key={symbol}
