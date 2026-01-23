@@ -3,7 +3,7 @@ import { useUserPreference } from "@/context/UserPreference";
 import { isArray } from "lodash";
 import { Hex, P256, Signature } from "ox";
 import { Address, Hex as HexAddress } from "viem";
-import { useAccount, useChainId, useSendCallsSync } from "wagmi";
+import { useAccount, useChainId, useSendCalls } from "wagmi";
 import { useSessionKeys } from "./useSessionKeys";
 
 export type TransactionCall = {
@@ -40,8 +40,8 @@ export function useTransaction() {
 
   const { connector, address } = useAccount();
 
-  // const { sendCallsAsync } = useSendCalls();
-  const { sendCallsSyncAsync } = useSendCallsSync();
+  const { sendCallsAsync } = useSendCalls();
+  // const { sendCallsSyncAsync } = useSendCallsSync();
 
   async function execute(props: TransactionProps) {
     console.log("executing...");
@@ -96,19 +96,19 @@ export function useTransaction() {
 
     try {
       // TODO: Fix type instantation issue - wagmi
-      // const result = await sendCallsAsync({
-      //   calls,
-      //   version: "1",
-      //   chainId,
-      //   timeout: 60_000,
-      // } as any);
-
-      const result = await sendCallsSyncAsync({
+      const result = await sendCallsAsync({
         calls,
         version: "1",
         chainId,
         timeout: 60_000,
       } as any);
+
+      // const result = await sendCallsSyncAsync({
+      //   calls,
+      //   version: "1",
+      //   chainId,
+      //   timeout: 60_000,
+      // } as any);
 
       console.log("chainId:: ", chainId);
       console.log("result:: ", result);
