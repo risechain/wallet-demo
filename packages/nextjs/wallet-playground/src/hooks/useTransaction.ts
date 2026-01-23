@@ -3,7 +3,7 @@ import { useUserPreference } from "@/context/UserPreference";
 import { isArray } from "lodash";
 import { Hex, P256, Signature } from "ox";
 import { Address, Hex as HexAddress } from "viem";
-import { useAccount, useChainId, useSendCalls, useSendCallsSync } from "wagmi";
+import { useAccount, useChainId, useSendCallsSync } from "wagmi";
 import { useSessionKeys } from "./useSessionKeys";
 
 export type TransactionCall = {
@@ -40,7 +40,7 @@ export function useTransaction() {
 
   const { connector, address } = useAccount();
 
-  const { sendCallsAsync } = useSendCalls();
+  // const { sendCallsAsync } = useSendCalls();
   const { sendCallsSyncAsync } = useSendCallsSync();
 
   async function execute(props: TransactionProps) {

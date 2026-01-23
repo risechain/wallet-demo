@@ -11,8 +11,6 @@ export function TransactionHeader(props: Readonly<HeaderProps>) {
   const { isSessionKeyEnabled } = useUserPreference();
   const { hasSessionKey: usableSessionKey } = useSessionKeys();
 
-  console.log("usableSessionKey:: ", usableSessionKey());
-
   return (
     <div className="flex gap-2 justify-between items-center">
       <p className="text-xl">{label}</p>
