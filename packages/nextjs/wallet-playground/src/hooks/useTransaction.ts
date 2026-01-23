@@ -3,7 +3,7 @@ import { useUserPreference } from "@/context/UserPreference";
 import { isArray } from "lodash";
 import { Hex, P256, Signature } from "ox";
 import { Address, Hex as HexAddress } from "viem";
-import { useAccount, useChainId, useSendCalls } from "wagmi";
+import { useAccount, useChainId, useSendCalls, useSendCallsSync } from "wagmi";
 import { useSessionKeys } from "./useSessionKeys";
 
 export type TransactionCall = {
@@ -41,6 +41,7 @@ export function useTransaction() {
   const { connector, address } = useAccount();
 
   const { sendCallsAsync } = useSendCalls();
+  const { sendCallsSyncAsync } = useSendCallsSync();
 
   async function execute(props: TransactionProps) {
     console.log("executing...");
@@ -95,25 +96,37 @@ export function useTransaction() {
 
     try {
       // TODO: Fix type instantation issue - wagmi
-      const result = await sendCallsAsync({
+      // const result = await sendCallsAsync({
+      //   calls,
+      //   version: "1",
+      //   chainId,
+      //   timeout: 60_000,
+      // } as any);
+
+      const result = await sendCallsSyncAsync({
         calls,
         version: "1",
         chainId,
         timeout: 60_000,
       } as any);
 
+      console.log("chainId:: ", chainId);
       console.log("result:: ", result);
 
       const hash = result.id
         ? await getTransactionHash(result.id as Address, provider)
         : "";
 
+      console.log("hash:: ", hash);
+
       // TODO: percept status 500 only?
-      const id = hash.receipts[0].transactionHash;
-      if (hash.status === 500) {
+      const id =
+        hash.receipts.length !== 0 ? hash.receipts[0].transactionHash : "";
+
+      if (hash.status !== 200) {
         return {
           success: false,
-          error: { message: hash.status },
+          error: { message: `Failed with status ${hash.status}` },
           data: { ...result, id, usedSessionKey: false },
         };
       } else {
