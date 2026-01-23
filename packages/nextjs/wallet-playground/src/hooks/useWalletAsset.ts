@@ -49,8 +49,6 @@ export function useWalletAsset(params: UseWalletBalanceParams) {
 
       const assets = response[hexChainId] ?? [];
 
-      console.log("assets:: ", assets);
-
       const asset = assets[0];
 
       return asset ? BigInt(asset.balance) : 0n;

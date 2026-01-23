@@ -93,7 +93,6 @@ export function Mint() {
     }
   };
 
-  console.log("resultMint:: ", resultMint);
   return (
     <>
       <div className="space-y-4">

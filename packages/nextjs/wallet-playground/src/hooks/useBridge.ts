@@ -1,6 +1,7 @@
 import { TokenConfig } from "@/config/tokens";
 import { useMemo, useState } from "react";
 import { Address, encodeFunctionData, parseAbiItem } from "viem";
+import { sepolia } from "viem/chains";
 import { TransactionCall, useTransaction } from "./useTransaction";
 
 export type BridgeProps = {
@@ -27,7 +28,7 @@ export function useBridge() {
   const [result, setResult] = useState<any | null>(null);
 
   async function onBridge(props: BridgeProps) {
-    const { account, amount, selectedToken, shouldApprove } = props;
+    const { account, amount, selectedToken } = props;
 
     setResult(null);
     setIsPending(true);
@@ -65,6 +66,7 @@ export function useBridge() {
       requiredPermissions: {
         calls: [selectedToken.bridgeWrapper.toLowerCase()],
       },
+      selectedChainId: sepolia.id,
     });
 
     setIsPending(false);

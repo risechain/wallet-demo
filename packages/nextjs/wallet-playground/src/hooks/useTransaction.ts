@@ -17,6 +17,7 @@ export type TransactionProps = {
   requiredPermissions?: {
     calls?: string[];
   };
+  selectedChainId?: number;
 };
 
 export type TransactionData = {
@@ -33,7 +34,7 @@ export function useTransaction() {
     keyPair: key,
   } = useSessionKeys();
 
-  const chainId = useChainId();
+  const connectedChainId = useChainId();
 
   const { isSessionKeyEnabled } = useUserPreference();
 
@@ -43,32 +44,33 @@ export function useTransaction() {
 
   async function execute(props: TransactionProps) {
     console.log("executing...");
-    const { calls, requiredPermissions } = props;
+    const { calls, requiredPermissions, selectedChainId } = props;
+
+    const chainId = selectedChainId ?? connectedChainId;
 
     if (isSessionKeyEnabled && sessionKey && hasUsableSessionKey) {
-      console.log("activeSessionKeys:: ", sessionKey);
       const callAddresses = requiredPermissions.calls.map((addr) =>
-        addr.toLowerCase()
+        addr.toLowerCase(),
       );
 
       const permissions = sessionKey.permissions?.calls || [];
 
       const isPermitted = callAddresses.every((requiredAddress) =>
         permissions.some(
-          (perm: any) => !perm.to || perm.to.toLowerCase() === requiredAddress
-        )
+          (perm: any) => !perm.to || perm.to.toLowerCase() === requiredAddress,
+        ),
       );
 
       try {
         if (isPermitted) {
           // Session key lacks required permissions, fall back to passkey
-          const result = await executeWithSessionKey(calls);
+          const result = await executeWithSessionKey(calls, chainId);
           return {
             error: null,
             ...result,
           };
         } else {
-          return executeWithPasskey(calls);
+          return executeWithPasskey(calls, chainId);
         }
       } catch (error) {
         console.log("execute-error: ", error);
@@ -79,11 +81,11 @@ export function useTransaction() {
         };
       }
     } else {
-      return executeWithPasskey(calls);
+      return executeWithPasskey(calls, chainId);
     }
   }
 
-  async function executeWithPasskey(calls: TransactionCall[]) {
+  async function executeWithPasskey(calls: TransactionCall[], chainId: number) {
     console.log("executing using passkey....");
 
     // Use the connector from the hook state
@@ -96,7 +98,11 @@ export function useTransaction() {
       const result = await sendCallsAsync({
         calls,
         version: "1",
+        chainId,
+        timeout: 60_000,
       } as any);
+
+      console.log("result:: ", result);
 
       const hash = result.id
         ? await getTransactionHash(result.id as Address, provider)
@@ -128,7 +134,10 @@ export function useTransaction() {
     }
   }
 
-  async function executeWithSessionKey(calls: TransactionCall[]) {
+  async function executeWithSessionKey(
+    calls: TransactionCall[],
+    chainId: number,
+  ) {
     console.log("executing using sessionkey....");
     try {
       // Use the connector from the hook state
@@ -160,7 +169,7 @@ export function useTransaction() {
         P256.sign({
           payload: digest as `0x${string}`,
           privateKey: key.privateKey as Address,
-        })
+        }),
       );
 
       // Send calls
@@ -265,7 +274,7 @@ export function useTransaction() {
 
     const capabilities = await provider.request({
       method: "wallet_getCapabilities",
-      params: [Hex.fromNumber(chainId)],
+      params: [Hex.fromNumber(connectedChainId)],
     });
 
     console.log("session-capabilities:: ", capabilities);

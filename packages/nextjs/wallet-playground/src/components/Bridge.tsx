@@ -73,13 +73,6 @@ export function Bridge() {
     tokenAddress: selectedToken?.address ?? "0x",
   });
 
-  console.log("availableTokens:: ", availableTokens);
-  console.log("selectedToken:: ", selectedToken?.address);
-  console.log("selectedChain:: ", selectedChain?.id);
-  console.log("balance:: ", balance);
-  console.log("address:: ", address);
-  console.log("----------------------");
-
   const amountBalance = useMemo(() => {
     if (balance) {
       return Value.format(balance, selectedToken?.decimals);
@@ -309,6 +302,7 @@ export function Bridge() {
           transactionHash={result?.id}
           transactionAddr={result?.id}
           errorMessage={error || errorMessage}
+          url={`https://testnet.layerzeroscan.com/tx/${result?.id}`}
         />
       </CardContent>
     </Card>
