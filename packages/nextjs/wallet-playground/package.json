@@ -36,7 +36,7 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.68.0",
-    "rise-wallet": "^0.3.2",
+    "rise-wallet": "0.3.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
