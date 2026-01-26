@@ -143,7 +143,7 @@ export function Swap() {
       setError(
         quoteError?.message?.includes("INSUFFICIENT_OUTPUT_AMOUNT")
           ? "Insufficient liquidity"
-          : "Quote failed - check liquidity"
+          : "Quote failed - check liquidity",
       );
     } else if (!fromAmount || fromAmount.trim() === "") {
       setToAmount("");
@@ -221,7 +221,7 @@ export function Swap() {
 
       <CardContent className="space-y-4">
         {/* From Section */}
-        <div className="bg-secondary/50 p-4 rounded-lg">
+        <div className="bg-secondary p-4 rounded-lg">
           <div className="grid gap-2">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">From</p>
@@ -231,8 +231,8 @@ export function Swap() {
                   ? Number.parseFloat(
                       formatUnits(
                         fromBalance?.value ?? 0n,
-                        fromBalance.decimals
-                      )
+                        fromBalance.decimals,
+                      ),
                     ).toFixed(4)
                   : "0"}
               </span>
@@ -274,7 +274,7 @@ export function Swap() {
         </div>
 
         {/* To Section */}
-        <div className="bg-secondary/50 p-4 rounded-lg">
+        <div className="bg-secondary p-4 rounded-lg">
           <div className="grid gap-2">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">To</p>
@@ -282,7 +282,7 @@ export function Swap() {
                 Balance:{" "}
                 {toBalance
                   ? Number.parseFloat(
-                      formatUnits(toBalance?.value ?? 0n, toBalance.decimals)
+                      formatUnits(toBalance?.value ?? 0n, toBalance.decimals),
                     ).toFixed(4)
                   : "0"}
               </span>

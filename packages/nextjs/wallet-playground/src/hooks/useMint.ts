@@ -1,7 +1,7 @@
 import { ErrorFormatter } from "@/lib/utils";
 import type { Address } from "ox";
 import { Value } from "ox";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { encodeFunctionData, parseAbiItem } from "viem";
 import { useAccount } from "wagmi";
 
@@ -14,19 +14,21 @@ export type UseMintTokenParams = {
 export function useMint() {
   const [isPending, setIsPending] = useState(false);
   const [result, setResult] = useState<any | null>(null);
+  const [statusCode, setStatusCode] = useState<number>(100);
+  const [id, setId] = useState<string>("");
 
   const { connector } = useAccount();
+
+  if (!connector) throw new Error("No connector available");
 
   const onMint = async (params: UseMintTokenParams) => {
     const { address, chainId, tokenAddress } = params;
     if (!tokenAddress || !chainId) return;
     setIsPending(true);
 
-    try {
-      if (!connector) throw new Error("No connector available");
+    const provider = (await connector.getProvider()) as any;
 
-      const provider = (await connector.getProvider()) as any;
-      // "0x28cd50d58f80da33b16542cdf8ce59717f66b957";
+    try {
       const { id } = await provider.request({
         method: "wallet_sendCalls",
         params: [
@@ -48,16 +50,10 @@ export function useMint() {
         ],
       });
 
-      const status = await provider.request({
-        method: "wallet_getCallsStatus",
-        params: [id],
-      });
-
-      console.log("mint call:", status);
-
-      setResult(status);
-      return status;
+      setId(id);
+      return id;
     } catch (e) {
+      setIsPending(false);
       const error = e as Error;
       const message =
         typeof error.cause === "string" ? error.cause : error.message;
@@ -66,10 +62,45 @@ export function useMint() {
         "mint error message:: ",
         ErrorFormatter.extractMessage(message),
       );
-    } finally {
-      setIsPending(false);
     }
   };
+
+  // listener
+  useEffect(() => {
+    let isResolved = false;
+
+    const getResult = async () => {
+      let status: any;
+
+      const provider = (await connector.getProvider()) as any;
+
+      // If status is 100, keep retrying until it changes
+      while (!isResolved) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        status = await provider.request({
+          method: "wallet_getCallsStatus",
+          params: [id],
+        });
+
+        console.log("mint call:", status);
+        console.log("----------------");
+
+        if (status.status !== 100) {
+          setIsPending(false);
+          setResult(status);
+          isResolved = true;
+          break;
+        }
+      }
+    };
+
+    getResult();
+
+    return () => {
+      isResolved = true;
+    };
+  }, [id]);
 
   const isSuccess = useMemo(() => {
     return result?.status === 200;

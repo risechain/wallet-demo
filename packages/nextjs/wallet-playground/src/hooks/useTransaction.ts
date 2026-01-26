@@ -2,6 +2,7 @@ import { PERMISSIONS } from "@/config/permissions";
 import { useUserPreference } from "@/context/UserPreference";
 import { isArray } from "lodash";
 import { Hex, P256, Signature } from "ox";
+import { useState } from "react";
 import { Address, Hex as HexAddress } from "viem";
 import { useAccount, useChainId, useSendCallsSync } from "wagmi";
 import { useSessionKeys } from "./useSessionKeys";
@@ -35,6 +36,8 @@ export function useTransaction() {
   } = useSessionKeys();
 
   const connectedChainId = useChainId();
+
+  const [statusCode, setStatusCode] = useState<number>(100);
 
   const { isSessionKeyEnabled } = useUserPreference();
 
@@ -113,7 +116,7 @@ export function useTransaction() {
       console.log("chainId:: ", chainId);
       console.log("result:: ", result);
 
-      const hash = result.id
+      let hash = result.id
         ? await getTransactionHash(result.id as Address, provider)
         : "";
 
@@ -240,6 +243,7 @@ export function useTransaction() {
     }
   }
 
+  // TODO: poll this until the status is no longer 100
   async function getTransactionHash(id: Address, provider: any) {
     // Use the connector from the hook state
     const hash = await provider.request({

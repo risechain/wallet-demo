@@ -1,6 +1,7 @@
 "use client";
 
 import { BRIDGE_TOKENS, Chain, SupportedChains } from "@/config/tokens";
+import { useAssetBalance } from "@/hooks/useAssetBalance";
 import { useBridge } from "@/hooks/useBridge";
 import { useMinimumDeposit } from "@/hooks/useMinimumDeposit";
 import { useWalletAsset } from "@/hooks/useWalletAsset";
@@ -9,6 +10,7 @@ import Image from "next/image";
 import { Value } from "ox";
 import { useEffect, useMemo, useState } from "react";
 import { formatUnits, parseUnits } from "viem";
+import { riseTestnet } from "viem/chains";
 import { useAccount } from "wagmi";
 import { TransactionResult } from "./TransactionResult";
 import { Button } from "./ui/button";
@@ -56,6 +58,13 @@ export function Bridge() {
     return availableTokens.find((t) => t.symbol === selectedTokenSymbol);
   }, [availableTokens, selectedTokenSymbol]);
 
+  // when selected token is usdc, get rise usdc balance also
+  const riseSelectedToken = useMemo(() => {
+    const riseTokens = BRIDGE_TOKENS[riseTestnet.id] || [];
+
+    return riseTokens.find((t) => t.symbol === selectedTokenSymbol);
+  }, [availableTokens, selectedTokenSymbol]);
+
   // Get minimum deposit amount
   const { minDepositAmount, isLoadingMinAmounts, isFetchingMinAmounts } =
     useMinimumDeposit({
@@ -73,6 +82,13 @@ export function Bridge() {
     tokenAddress: selectedToken?.address ?? "0x",
   });
 
+  // Get RISE chain balances for USDC and USDT
+  const { balance: riseTokenBalance } = useAssetBalance({
+    accountAddress: address ?? "0x",
+    chainId: riseTestnet.id,
+    tokenAddress: riseSelectedToken?.address,
+  });
+
   const amountBalance = useMemo(() => {
     if (balance) {
       return Value.format(balance, selectedToken?.decimals);
@@ -80,6 +96,10 @@ export function Bridge() {
 
     return "0.00";
   }, [balance, selectedToken?.decimals]);
+
+  const riseBalanceFormatted = useMemo(() => {
+    return riseTokenBalance ? formatUnits(riseTokenBalance, 18) : "0.00";
+  }, [riseTokenBalance]);
 
   const handleBridge = async () => {
     reset();
@@ -138,6 +158,27 @@ export function Bridge() {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* RISE Chain Balances */}
+        <div className="bg-secondary p-4 rounded-lg space-y-3">
+          <p className="text-sm font-semibold">RISE Wallet Balance</p>
+          <div className="flex items-center gap-2 bg-background p-3 rounded-lg">
+            <Image
+              src={riseSelectedToken?.icon}
+              alt="USDC"
+              width={20}
+              height={20}
+            />
+            <div className="flex gap-1 items-center">
+              <span className="text-sm font-semibold">
+                {riseBalanceFormatted}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {riseSelectedToken?.symbol}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Source Chain Selection */}
         <div className="space-y-2">
           <p className="text-sm font-semibold">Source Chain</p>
@@ -228,7 +269,7 @@ export function Bridge() {
         </div>
 
         {/* Amount Section */}
-        <div className="bg-secondary/50 p-4 rounded-lg">
+        <div className="bg-secondary p-4 rounded-lg">
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">Amount</p>

@@ -33,7 +33,7 @@ export function Transfer() {
   } = useTransfer();
 
   const [selectedToken, setSelectedToken] = useState<TokenSymbol | "ETH">(
-    "MockUSD"
+    "MockUSD",
   );
 
   const [recipient, setRecipient] = useState("");
@@ -124,7 +124,7 @@ export function Transfer() {
           </p>
         </div>
 
-        <div className="bg-secondary/50 p-4 rounded-lg space-y-1">
+        <div className="bg-secondary p-4 rounded-lg space-y-1">
           <p className="text-sm font-semibold">Recipient Address</p>
           <Input
             type="text"
@@ -138,7 +138,7 @@ export function Transfer() {
           />
         </div>
 
-        <div className="bg-secondary/50 p-4 rounded-lg space-y-1">
+        <div className="bg-secondary p-4 rounded-lg space-y-1">
           <p className="text-sm font-semibold">Amount</p>
           <Input
             type="number"

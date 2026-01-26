@@ -36,10 +36,6 @@ export function Mint() {
     null,
   );
 
-  const [bridgeMintResults, setBridgeMintResults] = useState<
-    Record<number, any>
-  >({});
-
   const {
     data: hasMinted,
     isSuccess,
@@ -82,15 +78,12 @@ export function Mint() {
     asset: (typeof SUPPORTED_BRIDGE_ASSETS)[number],
     index: number,
   ) => {
-    const response = await onMint({
+    setCurrentMintingIndex(index);
+    await onMint({
       address,
       chainId: sepolia.id,
       tokenAddress: asset.address,
     });
-    if (response) {
-      setBridgeMintResults((prev) => ({ ...prev, [index]: response }));
-      refetch();
-    }
   };
 
   return (
@@ -120,13 +113,14 @@ export function Mint() {
                   </div>
                   <Button
                     variant={isMinted(index) ? "success" : "default"}
-                    disabled={currentMintingIndex !== null || isMintingOnce}
+                    disabled={isMinting || isMintingOnce}
                     onClick={() => handleMintOnce(asset, index)}
                     className={cn(isMinted(index) && "pointer-events-none")}
                   >
                     {isMinted(index) ? "Already Minted" : "Mint"}
 
-                    {(currentMintingIndex === index || isPending) && (
+                    {((currentMintingIndex === index && isPending) ||
+                      (currentMintingIndex === index && isMintingOnce)) && (
                       <Spinner className="stroke-invert" />
                     )}
                   </Button>
@@ -170,11 +164,11 @@ export function Mint() {
                     </div>
                   </div>
                   <Button
-                    disabled={currentMintingIndex !== null || isMintingOnce}
+                    disabled={isMinting || isMintingOnce}
                     onClick={() => handleMint(asset, index)}
                   >
                     Mint
-                    {(currentMintingIndex === index || isPending) && (
+                    {currentMintingIndex === index && isMinting && (
                       <Spinner className="stroke-invert" />
                     )}
                   </Button>
