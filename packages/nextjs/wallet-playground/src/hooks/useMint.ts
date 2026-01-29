@@ -63,8 +63,8 @@ export function useMint() {
   };
 
   const isSuccess = useMemo(() => {
-    return result?.status === 200;
-  }, [result?.success]);
+    return result?.status === "success";
+  }, [result?.status]);
 
   const error = useMemo(() => {
     return result?.error;
@@ -73,7 +73,9 @@ export function useMint() {
   const errorMessage = useMemo(() => {
     if (!result) return "";
 
-    return result?.status === 200 ? "" : `Error with status: ${result?.status}`;
+    return result?.status === "success"
+      ? ""
+      : `Error with status: ${result?.status}`;
   }, [result]);
 
   const data = useMemo(() => {
