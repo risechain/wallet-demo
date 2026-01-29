@@ -87,11 +87,6 @@ export function useTransaction() {
   async function executeWithPasskey(calls: TransactionCall[], chainId: number) {
     console.log("executing using passkey....");
 
-    // Use the connector from the hook state
-    if (!connector) throw new Error("No connector available");
-
-    const provider = (await connector.getProvider()) as any;
-
     try {
       // TODO: Fix type instantation issue - wagmi
       const response = await sendCallsSyncAsync({
