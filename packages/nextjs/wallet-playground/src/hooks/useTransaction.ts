@@ -98,20 +98,19 @@ export function useTransaction() {
 
       console.log("result:: ", response);
 
-      const hasReceipt = response.receipts.length !== 0;
-      const id = hasReceipt ? response.receipts[0].transactionHash : "";
+      const sourceTxHash = response.receipts?.[0]?.transactionHash ?? "";
 
       if (response.status !== "success") {
         return {
           success: false,
           error: { message: `Failed with status ${response.statusCode}` },
-          data: { ...response, id, usedSessionKey: false },
+          data: { ...response, id: sourceTxHash, usedSessionKey: false },
         };
       } else {
         return {
           success: true,
           error: null,
-          data: { ...response, id, usedSessionKey: false },
+          data: { ...response, id: sourceTxHash, usedSessionKey: false },
         };
       }
     } catch (error) {
