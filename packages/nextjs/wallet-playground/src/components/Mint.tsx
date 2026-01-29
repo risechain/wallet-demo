@@ -81,7 +81,7 @@ export function Mint() {
     setCurrentMintingIndex(index);
     await onMint({
       address,
-      chainId: sepolia.id,
+      chainId: sepolia.id, // default supporting sepolia only for now
       tokenAddress: asset.address,
     });
   };

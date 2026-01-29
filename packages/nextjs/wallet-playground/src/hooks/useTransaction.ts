@@ -1,8 +1,6 @@
 import { PERMISSIONS } from "@/config/permissions";
 import { useUserPreference } from "@/context/UserPreference";
-import { isArray } from "lodash";
 import { Hex, P256, Signature } from "ox";
-import { useState } from "react";
 import { Address, Hex as HexAddress } from "viem";
 import { useAccount, useChainId, useSendCallsSync } from "wagmi";
 import { useSessionKeys } from "./useSessionKeys";
@@ -37,13 +35,10 @@ export function useTransaction() {
 
   const connectedChainId = useChainId();
 
-  const [statusCode, setStatusCode] = useState<number>(100);
-
   const { isSessionKeyEnabled } = useUserPreference();
 
   const { connector, address } = useAccount();
 
-  // const { sendCallsAsync } = useSendCalls();
   const { sendCallsSyncAsync } = useSendCallsSync();
 
   async function execute(props: TransactionProps) {
@@ -99,44 +94,29 @@ export function useTransaction() {
 
     try {
       // TODO: Fix type instantation issue - wagmi
-      // const result = await sendCallsAsync({
-      //   calls,
-      //   version: "1",
-      //   chainId,
-      //   timeout: 60_000,
-      // } as any);
-
-      const result = await sendCallsSyncAsync({
+      const response = await sendCallsSyncAsync({
         calls,
         version: "1",
         chainId,
         timeout: 60_000,
       } as any);
 
-      console.log("chainId:: ", chainId);
-      console.log("result:: ", result);
+      console.log("result:: ", response);
 
-      let hash = result.id
-        ? await getTransactionHash(result.id as Address, provider)
-        : "";
+      const hasReceipt = response.receipts.length !== 0;
+      const id = hasReceipt ? response.receipts[0].transactionHash : "";
 
-      console.log("hash:: ", hash);
-
-      // TODO: percept status 500 only?
-      const id =
-        hash.receipts.length !== 0 ? hash.receipts[0].transactionHash : "";
-
-      if (hash.status !== 200) {
+      if (response.status !== "success") {
         return {
           success: false,
-          error: { message: `Failed with status ${hash.status}` },
-          data: { ...result, id, usedSessionKey: false },
+          error: { message: `Failed with status ${response.statusCode}` },
+          data: { ...response, id, usedSessionKey: false },
         };
       } else {
         return {
           success: true,
           error: null,
-          data: { ...result, id, usedSessionKey: false },
+          data: { ...response, id, usedSessionKey: false },
         };
       }
     } catch (error) {
@@ -204,12 +184,6 @@ export function useTransaction() {
         result.length === 0
           ? ""
           : await getTransactionHash(result[0].id, provider);
-
-      let resp = result;
-
-      if (isArray(result) && result.length !== 0) {
-        resp = result[0];
-      }
 
       console.log("session-request:: ", request);
       console.log("session-capabilities:: ", capabilities);

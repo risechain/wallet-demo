@@ -34,8 +34,6 @@ export function useBridge() {
     setIsPending(true);
     const calls: TransactionCall[] = [];
 
-    console.log("bridge-amount:: ", amount);
-
     calls.push(
       {
         to: selectedToken.address,

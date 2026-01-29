@@ -1,7 +1,6 @@
 "use client";
 
 import { BRIDGE_TOKENS, Chain, SupportedChains } from "@/config/tokens";
-import { useAssetBalance } from "@/hooks/useAssetBalance";
 import { useBridge } from "@/hooks/useBridge";
 import { useMinimumDeposit } from "@/hooks/useMinimumDeposit";
 import { useWalletAsset } from "@/hooks/useWalletAsset";
@@ -82,11 +81,13 @@ export function Bridge() {
     tokenAddress: selectedToken?.address ?? "0x",
   });
 
-  // Get RISE chain balances for USDC and USDT
-  const { balance: riseTokenBalance } = useAssetBalance({
-    accountAddress: address ?? "0x",
-    chainId: riseTestnet.id,
-    tokenAddress: riseSelectedToken?.address,
+  const {
+    balance: riseTokenBalance,
+    // isLoading: isWalletAssetLoading,
+  } = useWalletAsset({
+    address: address ?? "0x",
+    chainId: riseTestnet?.id,
+    tokenAddress: riseSelectedToken?.address ?? "0x",
   });
 
   const amountBalance = useMemo(() => {
