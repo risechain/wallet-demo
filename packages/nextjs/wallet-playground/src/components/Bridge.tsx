@@ -4,8 +4,9 @@ import { BRIDGE_TOKENS, Chain, SupportedChains } from "@/config/tokens";
 import { useBridge } from "@/hooks/useBridge";
 import { useMinimumDeposit } from "@/hooks/useMinimumDeposit";
 import { useWalletAsset } from "@/hooks/useWalletAsset";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Info } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { Value } from "ox";
 import { useEffect, useMemo, useState } from "react";
 import { formatUnits, parseUnits } from "viem";
@@ -23,6 +24,11 @@ import {
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 import { Spinner } from "./ui/spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 export function Bridge() {
   const { address } = useAccount();
@@ -153,7 +159,26 @@ export function Bridge() {
     <Card>
       <CardHeader>
         <div className="flex gap-2 justify-between items-center">
-          <p className="text-xl">Global Deposit</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xl">Global Deposit</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[260px]">
+                <p>
+                  Need test tokens?{" "}
+                  <Link
+                    href="/mint"
+                    className="underline font-semibold hover:opacity-80"
+                  >
+                    Mint Tokens
+                  </Link>{" "}
+                  on Sepolia to test Global Deposit.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <p className="text-sm font-normal">Bridge to your RISE Wallet</p>
         </div>
       </CardHeader>

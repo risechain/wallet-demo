@@ -141,10 +141,11 @@ export function Mint() {
 
       <div className="space-y-4">
         <div className="bg-secondary p-4 space-y-4 rounded-lg">
+          <p className="text-sm font-semibold">Mint For Global Deposit</p>
           <p className="text-sm">
             Mint USDC and USDT on{" "}
             <span className="font-bold">Sepolia ({sepolia.id})</span> for
-            testing. Each address can mint{" "}
+            Global Deposit testing. Each address can mint{" "}
             <span className="font-bold">100</span> per token.
           </p>
           {SUPPORTED_BRIDGE_ASSETS.map((asset, index) => {

@@ -42,7 +42,7 @@ const demoItems = [
     icon: ArrowLeftRight,
   },
   {
-    title: "Deposit",
+    title: "Global Deposit",
     url: "/bridge",
     icon: BridgeIcon,
   },
