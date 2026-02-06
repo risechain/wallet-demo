@@ -99,9 +99,9 @@ export const BRIDGE_TOKENS: Record<number, BridgeToken[]> = {
   // Eth Sepolia
   11155111: [
     {
-      address: "0x28Cd50d58f80Da33B16542cdF8ce59717F66b957" as `0x${string}`,
+      address: "0x70315897fe28Dbe36DA81F10E1158bae1373C5b1" as `0x${string}`,
       bridgeContract:
-        "0x8421D6445915b251bE303475dfCdD083e4aCBA0f" as `0x${string}`,
+        "0x2C752f3E245A89828590B30c93daAAD19f31c801" as `0x${string}`,
       bridgeType: "layerzero",
       bridgeWrapper: "0x226cefe884c9425377954fB9B5Cb9AD4BdCD398D",
       decimals: 18,
@@ -148,7 +148,7 @@ export const SUPPORTED_BRIDGE_ASSETS: SupportedAsset[] = [
   // Bridge tokens on Rise Testnet
   // fix this
   {
-    address: "0x28Cd50d58f80Da33B16542cdF8ce59717F66b957" as `0x${string}`,
+    address: "0x70315897fe28Dbe36DA81F10E1158bae1373C5b1" as `0x${string}`,
     decimals: 18,
     name: "USDC",
     symbol: "USDC",
