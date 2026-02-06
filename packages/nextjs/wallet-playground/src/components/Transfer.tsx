@@ -33,7 +33,7 @@ export function Transfer() {
   } = useTransfer();
 
   const [selectedToken, setSelectedToken] = useState<TokenSymbol | "ETH">(
-    "MockUSD"
+    "MockUSD",
   );
 
   const [recipient, setRecipient] = useState("");
@@ -98,7 +98,7 @@ export function Transfer() {
               <ChevronDown />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end">
+          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
             {Object.entries(TOKENS).map(([symbol, tokenInfo]) => (
               <DropdownMenuItem
                 key={symbol}
@@ -124,7 +124,7 @@ export function Transfer() {
           </p>
         </div>
 
-        <div className="bg-secondary/50 p-4 rounded-lg space-y-1">
+        <div className="bg-secondary p-4 rounded-lg space-y-1">
           <p className="text-sm font-semibold">Recipient Address</p>
           <Input
             type="text"
@@ -138,7 +138,7 @@ export function Transfer() {
           />
         </div>
 
-        <div className="bg-secondary/50 p-4 rounded-lg space-y-1">
+        <div className="bg-secondary p-4 rounded-lg space-y-1">
           <p className="text-sm font-semibold">Amount</p>
           <Input
             type="number"

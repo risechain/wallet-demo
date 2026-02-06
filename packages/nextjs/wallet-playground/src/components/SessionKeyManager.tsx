@@ -193,8 +193,8 @@ export function SessionKeyManager() {
                 key={key.id}
                 className={cn(
                   "p-6 border rounded-lg w-full bg-warning/2 border-warning/25",
-                  isExpired && "bg-secondary/50 border-secondary/75",
-                  key.hasPrivateKey && "bg-primary/2 border-primary/25"
+                  isExpired && "bg-secondary border-secondary/75",
+                  key.hasPrivateKey && "bg-primary/2 border-primary/25",
                 )}
               >
                 {/* Key Header */}
@@ -204,7 +204,7 @@ export function SessionKeyManager() {
                       className={cn(
                         "w-2 h-2 rounded-full bg-warning",
                         isExpired && "bg-secondary",
-                        key.hasPrivateKey && "bg-success"
+                        key.hasPrivateKey && "bg-success",
                       )}
                     />
                     <span className="font-semibold">Session Key</span>
@@ -213,7 +213,7 @@ export function SessionKeyManager() {
                     className={cn(
                       "text-sm px-4 py-1 rounded-full bg-warning text-invert",
                       isExpired && "bg-secondary text-foreground",
-                      key.hasPrivateKey && "bg-success"
+                      key.hasPrivateKey && "bg-success",
                     )}
                   >
                     {isExpired && "Expired"}

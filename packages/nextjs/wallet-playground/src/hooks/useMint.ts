@@ -1,75 +1,86 @@
-import { MintableERC20ABI } from "@/abi/erc20";
+import { ErrorFormatter } from "@/lib/utils";
+import type { Address } from "ox";
+import { Value } from "ox";
 import { useMemo, useState } from "react";
-import { Address, encodeFunctionData } from "viem";
-import { TransactionCall, useTransaction } from "./useTransaction";
+import { encodeFunctionData, parseAbiItem } from "viem";
+import { useAccount, useSendCallsSync } from "wagmi";
+import { TransactionCall } from "./useTransaction";
 
-export type MintTokenProps = {
-  address: Address;
-  decimals?: number;
-  symbol?: string;
-  name?: string;
+export type UseMintTokenParams = {
+  address: Address.Address;
+  tokenAddress?: Address.Address;
+  chainId?: number;
 };
 
 export function useMint() {
-  const { execute } = useTransaction();
-
-  const [isPending, setIsPending] = useState<boolean>(false);
+  const [isPending, setIsPending] = useState(false);
   const [result, setResult] = useState<any | null>(null);
 
-  async function onMint(props: MintTokenProps) {
-    const { address } = props;
+  const { connector } = useAccount();
+  const { sendCallsSyncAsync } = useSendCallsSync();
 
-    setResult(null);
+  if (!connector) throw new Error("No connector available");
+
+  const onMint = async (params: UseMintTokenParams) => {
+    const { address, chainId, tokenAddress } = params;
+    if (!tokenAddress || !chainId) return;
     setIsPending(true);
-    const calls: TransactionCall[] = [];
 
-    calls.push({
-      to: address,
-      data: encodeFunctionData({
-        abi: MintableERC20ABI,
-        functionName: "mintOnce",
-        args: [],
-      }),
-    });
+    try {
+      const calls: TransactionCall[] = [];
+      calls.push({
+        data: encodeFunctionData({
+          abi: [parseAbiItem("function mint(address to, uint256 amount)")],
+          args: [address, Value.from("100", 18)],
+          functionName: "mint",
+        }),
+        to: tokenAddress,
+      });
 
-    const response = await execute({
-      calls,
-      requiredPermissions: { calls: [address.toLowerCase()] },
-    });
+      const response = await sendCallsSyncAsync({
+        calls,
+        version: "1",
+        chainId,
+        timeout: 60_000,
+      } as any);
 
-    setIsPending(false);
-    setResult(response);
+      console.log("response:: ", response);
 
-    console.log("mint-hook-response:: ", response);
-    return response;
-  }
+      setIsPending(false);
+      setResult(response);
+      return response;
+    } catch (e) {
+      setIsPending(false);
+      const error = e as Error;
+      const message =
+        typeof error.cause === "string" ? error.cause : error.message;
+
+      console.log(
+        "mint error message:: ",
+        ErrorFormatter.extractMessage(message),
+      );
+    }
+  };
 
   const isSuccess = useMemo(() => {
-    return !!result?.success;
-  }, [result?.success]);
+    return result?.status === "success";
+  }, [result?.status]);
 
   const error = useMemo(() => {
     return result?.error;
   }, [result?.error]);
 
   const errorMessage = useMemo(() => {
-    return (
-      result?.error?.shortMessage ??
-      result?.error?.cause?.shortMessage ??
-      result?.error?.message
-    );
-  }, [result?.error]);
+    if (!result) return "";
+
+    return result?.status === "success"
+      ? ""
+      : `Error with status: ${result?.status}`;
+  }, [result]);
 
   const data = useMemo(() => {
-    return result?.data;
-  }, [result?.data]);
+    return result;
+  }, [result]);
 
-  return {
-    onMint,
-    isPending,
-    errorMessage,
-    isSuccess,
-    error,
-    data,
-  };
+  return { isPending, errorMessage, isSuccess, error, data, onMint };
 }

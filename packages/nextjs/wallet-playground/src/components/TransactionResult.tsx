@@ -12,6 +12,7 @@ export type ResultProps = {
   isError?: boolean;
   isWarning?: boolean;
   warningMessage?: string;
+  url?: string;
 };
 
 export function TransactionResult(props: Readonly<ResultProps>) {
@@ -22,6 +23,7 @@ export function TransactionResult(props: Readonly<ResultProps>) {
     errorMessage,
     isWarning,
     warningMessage,
+    url,
   } = props;
 
   return (
@@ -52,7 +54,10 @@ export function TransactionResult(props: Readonly<ResultProps>) {
             {transactionHash && (
               <div className="flex items-center gap-1">
                 <Link
-                  href={`https://explorer.testnet.riselabs.xyz/tx/${transactionHash}`}
+                  href={
+                    url ??
+                    `https://explorer.testnet.riselabs.xyz/tx/${transactionHash}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   title="View on explorer"
@@ -82,7 +87,10 @@ export function TransactionResult(props: Readonly<ResultProps>) {
           {transactionHash && (
             <div className="flex items-center gap-1">
               <Link
-                href={`https://explorer.testnet.riselabs.xyz/tx/${transactionHash}`}
+                href={
+                  url ??
+                  `https://explorer.testnet.riselabs.xyz/tx/${transactionHash}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 title="View on explorer"
